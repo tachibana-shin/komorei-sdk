@@ -2,7 +2,7 @@
 use super::{
 	FFIResult, Rid,
 	canvas::ImageRef,
-	error::AidokuError,
+	error::KomoreiError,
 	html::Document,
 	std::{destroy, read_string_and_destroy},
 };
@@ -155,7 +155,7 @@ impl Request {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use aidoku::imports::net::{HttpMethod, Request};
+	/// use komorei::imports::net::{HttpMethod, Request};
 	/// Request::new("https://example.com", HttpMethod::Get).unwrap();
 	/// ```
 	pub fn new<T: AsRef<str>>(url: T, http_method: HttpMethod) -> Result<Self, RequestError> {
@@ -304,7 +304,7 @@ impl Request {
 	}
 
 	/// Gets the response data as a string.
-	pub fn string(self) -> Result<String, AidokuError> {
+	pub fn string(self) -> Result<String, KomoreiError> {
 		self.send()?.get_string()
 	}
 
@@ -317,7 +317,7 @@ impl Request {
 #[cfg(feature = "json")]
 impl Request {
 	/// Get the response data as an owned JSON value.
-	pub fn json_owned<T>(self) -> Result<T, AidokuError>
+	pub fn json_owned<T>(self) -> Result<T, KomoreiError>
 	where
 		T: serde::de::DeserializeOwned,
 	{
@@ -380,11 +380,11 @@ impl Response {
 	}
 
 	/// Gets the response data as a string.
-	pub fn get_string(&self) -> Result<String, AidokuError> {
+	pub fn get_string(&self) -> Result<String, KomoreiError> {
 		let res = String::from_utf8(self.get_data()?);
 		match res {
 			Ok(res) => Ok(res),
-			Err(err) => Err(AidokuError::Utf8Error(err.utf8_error())),
+			Err(err) => Err(KomoreiError::Utf8Error(err.utf8_error())),
 		}
 	}
 
@@ -415,7 +415,7 @@ impl Response {
 #[cfg(feature = "json")]
 impl Response {
 	/// Get the response data as a JSON value. This requires the request to stay in scope so the data can be referenced.
-	pub fn get_json<'a, T>(&'a mut self) -> Result<T, AidokuError>
+	pub fn get_json<'a, T>(&'a mut self) -> Result<T, KomoreiError>
 	where
 		T: serde::de::Deserialize<'a>,
 	{
@@ -426,7 +426,7 @@ impl Response {
 	}
 
 	/// Get the response data as an owned JSON value.
-	pub fn get_json_owned<T>(self) -> Result<T, AidokuError>
+	pub fn get_json_owned<T>(self) -> Result<T, KomoreiError>
 	where
 		T: serde::de::DeserializeOwned,
 	{

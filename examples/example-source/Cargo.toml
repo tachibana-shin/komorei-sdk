@@ -7,11 +7,11 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
-aidoku = { path = "../../crates/lib" }
+komorei = { path = "../../crates/lib" }
 
 [dev-dependencies]
-aidoku = { path = "../../crates/lib", features = ["test"] }
-aidoku-test = { path = "../../crates/test-macro" }
+komorei = { path = "../../crates/lib", features = ["test"] }
+komorei-test = { path = "../../crates/test-macro" }
 
 [profile.dev]
 panic = "abort"

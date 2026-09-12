@@ -1,4 +1,4 @@
-//! Verify an Aidoku source to ensure it's ready to be published.
+//! Verify a Komorei source to ensure it's ready to be published.
 use crate::models::SourceJson;
 use anyhow::anyhow;
 use colored::Colorize;
@@ -10,8 +10,11 @@ use wasmparser::{Parser, Payload};
 
 // include json schemas as static strings
 const SOURCE_JSON_SCHEMA: &str = include_str!("../supporting/schema/source.schema.json");
-const FILTERS_JSON_SCHEMA: &str = include_str!("../supporting/schema/filters.schema.json");
-const SETTINGS_JSON_SCHEMA: &str = include_str!("../supporting/schema/settings.schema.json");
+
+/// The API version of the Komorei SDK this verification targets.
+fn sdk_api_version() -> FullVersion {
+	FullVersion::new(1, 0, 0)
+}
 
 pub fn run(files: Vec<std::path::PathBuf>) -> anyhow::Result<()> {
 	// ensure files were provided
@@ -24,10 +27,6 @@ pub fn run(files: Vec<std::path::PathBuf>) -> anyhow::Result<()> {
 	// load json schemas
 	let source_json_schema: Value = serde_json::from_str(SOURCE_JSON_SCHEMA)?;
 	let source_json_validator = jsonschema::validator_for(&source_json_schema)?;
-	let filters_json_schema: Value = serde_json::from_str(FILTERS_JSON_SCHEMA)?;
-	let filters_json_validator = jsonschema::validator_for(&filters_json_schema)?;
-	let settings_json_schema: Value = serde_json::from_str(SETTINGS_JSON_SCHEMA)?;
-	let settings_json_validator = jsonschema::validator_for(&settings_json_schema)?;
 
 	// validate each file
 	for (idx, path) in files.iter().enumerate() {
@@ -126,28 +125,7 @@ pub fn run(files: Vec<std::path::PathBuf>) -> anyhow::Result<()> {
 			true,
 		);
 
-		// filters.json
-		let filters_json_valid = validate_json(
-			&mut archive,
-			"Payload/filters.json",
-			&filters_json_validator,
-			false,
-		);
-
-		// settings.json
-		let settings_json_valid = validate_json(
-			&mut archive,
-			"Payload/settings.json",
-			&settings_json_validator,
-			false,
-		);
-
-		if !(has_main_wasm
-			&& icon_valid
-			&& source_json_valid
-			&& filters_json_valid
-			&& settings_json_valid)
-		{
+		if !(has_main_wasm && icon_valid && source_json_valid) {
 			found_error = true;
 		}
 	}
@@ -202,14 +180,15 @@ fn validate_json(
 	}
 }
 
-// the mimimum exports required for a source to work
+// the minimum exports required for a source to work
 #[derive(Default)]
 struct RequiredExports {
 	start: bool,
 	free_result: bool,
-	get_search_manga_list: bool,
-	get_manga_update: bool,
-	get_page_list: bool,
+	get_search_anime_list: bool,
+	get_anime_update: bool,
+	get_stream_list: bool,
+	get_stream: bool,
 }
 
 impl RequiredExports {
@@ -220,18 +199,20 @@ impl RequiredExports {
 	fn all_satisfied(&self) -> bool {
 		self.start
 			&& self.free_result
-			&& self.get_search_manga_list
-			&& self.get_manga_update
-			&& self.get_page_list
+			&& self.get_search_anime_list
+			&& self.get_anime_update
+			&& self.get_stream_list
+			&& self.get_stream
 	}
 
 	fn mark(&mut self, name: &str) {
 		match name {
 			"start" => self.start = true,
 			"free_result" => self.free_result = true,
-			"get_search_manga_list" => self.get_search_manga_list = true,
-			"get_manga_update" => self.get_manga_update = true,
-			"get_page_list" => self.get_page_list = true,
+			"get_search_anime_list" => self.get_search_anime_list = true,
+			"get_anime_update" => self.get_anime_update = true,
+			"get_stream_list" => self.get_stream_list = true,
+			"get_stream" => self.get_stream = true,
 			_ => {}
 		}
 	}
@@ -247,7 +228,6 @@ fn validate_wasm(
 	}
 
 	let mut exports = RequiredExports::new();
-	let mut api_min_version = FullVersion::new(0, 7, 0);
 
 	let mut exports_checked = false;
 	let mut imports_checked = false;
@@ -259,52 +239,7 @@ fn validate_wasm(
 		match payload {
 			Payload::ImportSection(s) => {
 				for import in s.into_imports() {
-					let Ok(import) = import else {
-						continue;
-					};
-					use wasmparser::Import;
-					let v = match import {
-						Import {
-							module: "js",
-							// webview_eval_async was introduced in 0.8.4, but it crashes until a fix in 0.9
-							name:
-								"webview_eval_async" | "webview_get_cookies" | "webview_delete_cookie",
-							..
-						} => FullVersion::new(0, 9, 0),
-						Import {
-							module: "js",
-							name:
-								"context_eval_async"
-								| "webview_set_rule_list"
-								| "webview_add_user_script",
-							..
-						} => FullVersion::new(0, 8, 4),
-						Import {
-							module: "html",
-							name: "kind" | "child_nodes",
-							..
-						} => FullVersion::new(0, 8, 3),
-						Import {
-							module: "net",
-							name: "get_url" | "set_timeout",
-							..
-						} => FullVersion::new(0, 8, 3),
-						Import {
-							module: "html",
-							name:
-								"remove" | "add_class" | "remove_class" | "set_attr" | "remove_attr",
-							..
-						} => FullVersion::new(0, 8, 0),
-						Import {
-							module: "std",
-							name: "parse_date",
-							..
-						} => FullVersion::new(0, 7, 1),
-						_ => continue,
-					};
-					if v > api_min_version {
-						api_min_version = v;
-					}
+					let _ = import;
 				}
 				imports_checked = true;
 			}
@@ -314,17 +249,6 @@ fn validate_wasm(
 						continue;
 					};
 					exports.mark(export.name);
-					use wasmparser::Export;
-					let v = match export {
-						Export {
-							name: "process_cover_image",
-							..
-						} => FullVersion::new(0, 9, 0),
-						_ => continue,
-					};
-					if v > api_min_version {
-						api_min_version = v;
-					}
 				}
 				exports_checked = true;
 			}
@@ -339,15 +263,15 @@ fn validate_wasm(
 		.and_then(|json| json.info.min_app_version)
 		.and_then(|s| Version::parse(&s).ok())
 		.map(|v| FullVersion::new(v.major(), v.minor(), v.patch().unwrap_or(0)))
-		.unwrap_or(FullVersion::new(0, 7, 0));
+		.unwrap_or(sdk_api_version());
 
-	let api_valid = api_min_version <= defined_min_version;
+	let api_valid = sdk_api_version() <= defined_min_version;
 	println!(
 		"    * defined minimum version accepts api version... {}",
 		if api_valid {
 			"yes".green()
 		} else {
-			format!("no (api version: {api_min_version})").red()
+			format!("no (api version: {})", sdk_api_version()).red()
 		}
 	);
 

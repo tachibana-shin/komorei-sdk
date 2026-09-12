@@ -8,7 +8,7 @@ use std::{io::Cursor, str::FromStr};
 use url::Url;
 use wasmer::FunctionEnvMut;
 
-const DEFAULT_USER_AGENT: &str = "Aidoku/1 CFNetwork/3826.500.131 Darwin/24.5.0";
+const DEFAULT_USER_AGENT: &str = "Komorei/1.0";
 
 enum Result {
 	Success,

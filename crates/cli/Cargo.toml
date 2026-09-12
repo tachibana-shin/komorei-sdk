@@ -1,15 +1,15 @@
 [package]
-name = "aidoku-cli"
+name = "komorei-cli"
 version = "0.1.0"
-description = "Command-line utility for Aidoku source development"
-repository = "https://github.com/Aidoku/aidoku-rs"
+description = "Command-line utility for Komorei source development"
+repository = "https://github.com/komorei-sdk/komorei-sdk"
 authors = ["skitty"]
 edition = "2024"
 publish = false
 
 [[bin]]
-name = "aidoku"
-path = "src/bin/aidoku.rs"
+name = "komorei"
+path = "src/bin/komorei.rs"
 
 [dependencies]
 anyhow = "1.0"

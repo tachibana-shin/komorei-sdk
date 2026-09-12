@@ -1,6 +1,6 @@
 #![cfg(feature = "helpers")]
 
-use aidoku::{
+use komorei::{
 	HashMap,
 	helpers::uri::{QueryParameters, SerializeError, encode_uri_component},
 };

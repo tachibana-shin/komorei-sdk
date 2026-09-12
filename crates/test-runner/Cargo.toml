@@ -1,18 +1,18 @@
 [package]
-name = "aidoku-test-runner"
+name = "komorei-test-runner"
 version = "0.1.0"
-description = "Test runner for Aidoku sources"
-repository = "https://github.com/Aidoku/aidoku-rs"
+description = "Test runner for Komorei sources"
+repository = "https://github.com/komorei-sdk/komorei-sdk"
 authors = ["skitty"]
 edition = "2024"
 publish = false
 
 [[bin]]
-name = "aidoku-test-runner"
-path = "src/bin/aidoku-test-runner.rs"
+name = "komorei-test-runner"
+path = "src/bin/komorei-test-runner.rs"
 
 [dependencies]
-aidoku = { path = "../lib", default-features = false }
+komorei = { path = "../lib", default-features = false }
 anyhow = "1"
 boa_engine = "0.21"
 chrono = "0.4"

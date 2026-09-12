@@ -1,5 +1,5 @@
-target/
+target
 *.wat
 .DS_Store
-examples/*/*.aix
+examples/*/*.krx
 book/book/

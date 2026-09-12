@@ -1,18 +1,19 @@
 # Introduction
 
-This guide outlines how to create an Aidoku source using the
-[aidoku-rs](https://github.com/Aidoku/aidoku-rs) library. 
+This guide outlines how to create a Komorei source using the
+[komorei-sdk](https://github.com/komorei-sdk/komorei-sdk) library — a fork of `aidoku-rs` adapted
+for the [Komorei](https://github.com/git-shin/komorei-app) Android app (Vietnamese UI, anime
+streaming rather than manga reading).
 
 ## Asking Questions
 
-If this guide doesn't answer any questions you may have, feel free to reach out in the `#source-dev`
-channel in the [Aidoku Discord server](https://discord.gg/aidoku). Someone there will be happy to
-help.
+If this guide doesn't answer any questions you may have, feel free to open a
+[discussion](https://github.com/komorei-sdk/komorei-sdk/discussions) on the repository.
 
-Note that Aidoku doesn't endorse any sources proxying illegal or NSFW content, so please keep
+Note that Komorei doesn't endorse any sources proxying illegal or NSFW content, so please keep
 discussion limited to technical aspects of source development.
 
 ## Other Resources
 
-- [aidoku-rs documentation](https://aidoku.github.io/aidoku-rs/aidoku/)
-- [example source](https://github.com/Aidoku/aidoku-rs/tree/main/examples/example-source)
+- [komorei-sdk documentation](https://komorei-sdk.github.io/komorei-sdk/komorei/)
+- [example source](https://github.com/komorei-sdk/komorei-sdk/tree/main/examples/example-source)

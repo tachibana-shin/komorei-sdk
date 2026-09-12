@@ -52,79 +52,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aidoku"
-version = "0.3.0"
-dependencies = [
- "euclid",
- "hashbrown 0.16.1",
- "itoa",
- "num-traits",
- "paste",
- "postcard",
- "serde",
- "serde_json",
- "talc",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "aidoku-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "clap",
- "colored",
- "dialoguer",
- "image",
- "jsonschema",
- "local-ip-address",
- "rayon",
- "serde",
- "serde_json",
- "serde_repr",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "version-number",
- "wasmparser 0.248.0",
- "zip",
-]
-
-[[package]]
-name = "aidoku-test"
-version = "1.0.0"
-dependencies = [
- "quote",
- "syn 2.0.117",
-]
-
-[[package]]
-name = "aidoku-test-runner"
-version = "0.1.0"
-dependencies = [
- "aidoku",
- "anyhow",
- "boa_engine",
- "chrono",
- "chrono-tz",
- "ego-tree",
- "euclid",
- "font-kit",
- "image",
- "libtest-mimic",
- "postcard",
- "raqote",
- "reqwest",
- "scraper",
- "serde",
- "url",
- "wasmer",
-]
-
-[[package]]
 name = "aligned"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2606,6 +2533,79 @@ dependencies = [
  "serde_json",
  "unicode-general-category",
  "uuid-simd",
+]
+
+[[package]]
+name = "komorei"
+version = "0.3.0"
+dependencies = [
+ "euclid",
+ "hashbrown 0.16.1",
+ "itoa",
+ "num-traits",
+ "paste",
+ "postcard",
+ "serde",
+ "serde_json",
+ "talc",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "komorei-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "clap",
+ "colored",
+ "dialoguer",
+ "image",
+ "jsonschema",
+ "local-ip-address",
+ "rayon",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "version-number",
+ "wasmparser 0.248.0",
+ "zip",
+]
+
+[[package]]
+name = "komorei-test"
+version = "1.0.0"
+dependencies = [
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "komorei-test-runner"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "boa_engine",
+ "chrono",
+ "chrono-tz",
+ "ego-tree",
+ "euclid",
+ "font-kit",
+ "image",
+ "komorei",
+ "libtest-mimic",
+ "postcard",
+ "raqote",
+ "reqwest",
+ "scraper",
+ "serde",
+ "url",
+ "wasmer",
 ]
 
 [[package]]

@@ -1,9 +1,9 @@
 [book]
-title = "Aidoku Source Development"
-authors = ["Skitty"]
+title = "Komorei Source Development"
+authors = ["Skitty (upstream aidoku-rs)"]
 language = "en"
-description = "This book outlines how to get started with Aidoku source development using aidoku-rs."
+description = "This book outlines how to get started with Komorei source development using the komorei-sdk."
 
 [output.html]
-git-repository-url = "https://github.com/Aidoku/aidoku-rs"
+git-repository-url = "https://github.com/komorei-sdk/komorei-sdk"
 sidebar-header-nav = false

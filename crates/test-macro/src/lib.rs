@@ -4,7 +4,7 @@ use quote::quote;
 use syn::{parse_macro_input, parse_quote};
 
 #[proc_macro_attribute]
-pub fn aidoku_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn komorei_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
 	let mut item = parse_macro_input!(item as syn::ItemFn);
 	let name = item.sig.ident.to_string();
 
@@ -16,8 +16,8 @@ pub fn aidoku_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
 	item.block.stmts.insert(
 		1,
 		parse_quote! {
-			std::panic::set_hook(::aidoku::alloc::Box::new(|info| {
-				::aidoku::prelude::println!("{info}");
+			std::panic::set_hook(::komorei::alloc::Box::new(|info| {
+				::komorei::prelude::println!("{info}");
 			}));
 		},
 	);
@@ -32,7 +32,7 @@ pub fn aidoku_test(_attr: TokenStream, item: TokenStream) -> TokenStream {
 	// create a custom export name so we can read the exports in the test runner
 	let res = quote! {
 		#[cfg(test)]
-		#[unsafe(export_name = concat!("$aidoku-test$", #ignore, module_path!(), "::",  #name))]
+		#[unsafe(export_name = concat!("$komorei-test$", #ignore, module_path!(), "::",  #name))]
 		#item
 	};
 	res.into()

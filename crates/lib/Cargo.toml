@@ -1,8 +1,8 @@
 [package]
-name = "aidoku"
+name = "komorei"
 version = "0.3.0"
-description = "Aidoku source API wrapper"
-repository = "https://github.com/Aidoku/aidoku-rs"
+description = "Komorei source API wrapper"
+repository = "https://github.com/komorei-sdk/komorei-sdk"
 authors = ["skitty"]
 edition = "2024"
 publish = false

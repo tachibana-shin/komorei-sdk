@@ -1,17 +1,23 @@
 #![no_std]
-use aidoku::{
+use komorei::{
 	alloc::{vec, String, Vec},
 	imports::{canvas::*, defaults::defaults_get, net::Request},
 	prelude::*,
-	AlternateCoverProvider, Chapter, CheckFilter, ContentRating, CoverImageProcessor,
-	DeepLinkHandler, DeepLinkResult, DynamicFilters, DynamicListings, DynamicSettings, Filter,
-	FilterValue, Home, HomeComponent, HomeLayout, ImageResponse, Listing, ListingProvider, Manga,
-	MangaPageResult, MangaStatus, MangaWithChapter, MigrationHandler, MultiSelectFilter,
-	NotificationHandler, Page, PageContent, PageDescriptionProvider, RangeFilter, Result,
-	SelectFilter, Setting, SortFilter, Source, TextFilter, ToggleSetting,
+	Anime, AnimePageResult, AnimeSeason, AnimeStatus, AnimeWithEpisode, CategoryLink, CheckFilter,
+	CoverImageProcessor, DeepLinkHandler, DeepLinkResult, DynamicFilters, DynamicListings,
+	DynamicSettings, Episode, Filter, FilterValue, HashMap, Home, HomeComponent, HomeLayout,
+	ImageResponse, Listing, ListingProvider, MigrationHandler, MultiSelectFilter,
+	NotificationHandler, RangeFilter, RangeLong, Result, SelectFilter, Setting, SortFilter, Source,
+	StreamData, StreamInfo, StreamType, SubtitleInfo, TextFilter, ToggleSetting,
 };
 
 const PAGE_SIZE: i32 = 20;
+
+// real, playable sample media (playback works out of the box)
+const SAMPLE_HLS: &str = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+const SAMPLE_MP4: &str =
+	"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+const SAMPLE_COVER: &str = "https://example.com/cover.png";
 
 // to create a source, you need a struct that implements the Source trait
 // the struct can contain properties that are initialized with the new() method
@@ -26,128 +32,203 @@ impl Source for ExampleSource {
 
 	// this method will be called first without a query when the search page is opened,
 	// then when a search query is entered or filters are changed
-	fn get_search_manga_list(
+	fn get_search_anime_list(
 		&self,
 		query: Option<String>,
 		page: i32,
 		_filters: Vec<FilterValue>,
-	) -> Result<MangaPageResult> {
-		let mut entries: Vec<Manga> = Vec::new();
+	) -> Result<AnimePageResult> {
+		let mut entries: Vec<Anime> = Vec::new();
 		let start = (page - 1) * PAGE_SIZE + 1;
 		for i in start..start + PAGE_SIZE {
-			let title = format!("Manga {i}");
+			let title = format!("Anime {i}");
 			if let Some(query) = query.as_ref() {
 				if !title.contains(query) {
 					continue;
 				}
 			}
-			entries.push(Manga {
+			entries.push(Anime {
 				key: format!("{i}"),
+				source_id: String::from("en.example-source"),
 				title,
-				cover: Some(String::from("https://aidoku.app/images/icon.png")),
-				authors: Some(vec![String::from("Author")]),
+				original_title: String::from("Original title"),
+				cover: String::from(SAMPLE_COVER),
+				episode_count: 12,
+				current_episode: Some(String::from("Tập 12/12")),
+				status: AnimeStatus::Ongoing,
+				genres: vec![CategoryLink {
+					name: String::from("Action"),
+					filters: Vec::new(),
+				}],
 				..Default::default()
 			})
 		}
-		Ok(MangaPageResult {
+		Ok(AnimePageResult {
 			entries,
 			has_next_page: start < 40,
 		})
 	}
 
-	// this method will be called when a manga page is opened
-	fn get_manga_update(
+	// this method will be called when an anime page is opened
+	fn get_anime_update(
 		&self,
-		mut manga: Manga,
+		mut anime: Anime,
 		needs_details: bool,
 		needs_chapters: bool,
-	) -> Result<Manga> {
+	) -> Result<Anime> {
 		if needs_details {
-			manga.authors = Some(vec![String::from("Author")]);
-			manga.description = ExampleSource::get_latest_aidoku_version();
-			manga.status = MangaStatus::Ongoing;
-			manga.content_rating = ContentRating::Safe;
-			manga.tags = Some(vec![String::from("Tag 1"), String::from("Tag 2")]);
-			manga.url = Some(String::from("https://aidoku.app"));
+			anime.description = Self::fetch_example_title();
+			anime.banner = Some(String::from(SAMPLE_COVER));
+			anime.status = AnimeStatus::Ongoing;
+			anime.release_year = Some(CategoryLink {
+				name: String::from("2024"),
+				filters: Vec::new(),
+			});
+			anime.authors = vec![CategoryLink {
+				name: String::from("Author"),
+				filters: Vec::new(),
+			}];
+			anime.studio = Some(CategoryLink {
+				name: String::from("Studio"),
+				filters: Vec::new(),
+			});
+			anime.rating = Some(8.5);
+			anime.rating_count = Some(1234);
+			anime.views = 99999;
+			anime.next_episode_air_info = Some(String::from("Tập 13 phát sóng 20:00 thứ 7"));
+			anime.quality_tag = Some(String::from("FHD"));
+			anime.seasons = vec![
+				AnimeSeason::new(String::from("1"), String::from("Season 1")),
+				AnimeSeason::new(String::from("2"), String::from("Season 2")),
+			];
+			anime.url = Some(String::from("https://example.com/anime/1"));
 		}
 		if needs_chapters {
-			manga.chapters = Some(vec![
-				Chapter {
+			anime.episodes = Some(vec![
+				Episode {
 					key: String::from("8"),
-					chapter_number: Some(8.0),
+					episode_number: String::from("8"),
 					..Default::default()
 				},
-				Chapter {
+				Episode {
 					key: String::from("7"),
-					chapter_number: Some(7.0),
+					episode_number: String::from("7"),
 					title: Some(String::from("Title")),
+					thumbnail: Some(String::from(SAMPLE_COVER)),
+					quality: Some(String::from("1080p FHD")),
 					..Default::default()
 				},
-				Chapter {
+				Episode {
 					key: String::from("6"),
-					chapter_number: Some(6.0),
+					episode_number: String::from("6"),
 					title: Some(String::from("Title")),
 					date_uploaded: Some(1692318525),
 					..Default::default()
 				},
-				Chapter {
+				Episode {
 					key: String::from("5"),
-					chapter_number: Some(5.0),
+					episode_number: String::from("5"),
 					..Default::default()
 				},
-				Chapter {
+				Episode {
 					key: String::from("4"),
-					chapter_number: Some(4.0),
+					episode_number: String::from("4"),
 					..Default::default()
 				},
-				Chapter {
+				Episode {
 					key: String::from("3"),
-					chapter_number: Some(3.0),
+					episode_number: String::from("3"),
 					..Default::default()
 				},
-				Chapter {
+				Episode {
 					key: String::from("2"),
-					chapter_number: Some(2.0),
+					episode_number: String::from("2"),
 					..Default::default()
 				},
-				Chapter {
+				Episode {
 					key: String::from("1"),
-					chapter_number: Some(1.0),
+					episode_number: String::from("1"),
 					..Default::default()
 				},
 			]);
 		}
-		Ok(manga)
+		Ok(anime)
 	}
 
-	fn get_page_list(&self, _manga: Manga, _chapter: Chapter) -> Result<Vec<Page>> {
+	// returns the playable streams (servers) for a given episode
+	fn get_stream_list(&self, _anime: Anime, _episode: Episode) -> Result<Vec<StreamInfo>> {
 		Ok(vec![
-			Page {
-				content: PageContent::url("https://aidoku.app/images/icon.png"),
-				has_description: true,
-				description: Some("Description".into()),
-				..Default::default()
+			StreamInfo {
+				key: String::from("mux"),
+				name: String::from("Server 1"),
+				quality: String::from("1080p"),
 			},
-			Page {
-				content: PageContent::text(
-					"# Title\n\nThis is some description\n\n## Section\n\nThis is a section.",
-				),
-				has_description: true,
-				description: None,
-				..Default::default()
+			StreamInfo {
+				key: String::from("mp4"),
+				name: String::from("Server 2"),
+				quality: String::from("720p"),
 			},
 		])
+	}
+
+	// resolves the stream data (media url, headers, subtitles) for a given stream
+	fn get_stream(&self, _anime: Anime, _episode: Episode, stream: StreamInfo) -> Result<StreamData> {
+		// return `is_content: true` with a directly-playable url.
+		// if a source returns `is_content: false`, the app resolves (fetches) the
+		// url itself before playback.
+		match stream.key.as_str() {
+			"mp4" => Ok(StreamData {
+				url: String::from(SAMPLE_MP4),
+				stream_type: StreamType::MP4,
+				is_content: true,
+				headers: {
+					let mut headers = HashMap::new();
+					headers.insert(String::from("User-Agent"), String::from("Komorei/1.0"));
+					headers
+				},
+				subtitles: Vec::new(),
+				intro: None,
+				outro: None,
+			}),
+			_ => Ok(StreamData {
+				url: String::from(SAMPLE_HLS),
+				stream_type: StreamType::HLS, // auto-detected by the media source factory
+				is_content: true,
+				headers: {
+					let mut headers = HashMap::new();
+					headers.insert(String::from("User-Agent"), String::from("Komorei/1.0"));
+					headers
+				},
+				// sample subtitle track. replace with a real track url in a real source.
+				subtitles: vec![SubtitleInfo {
+					url: String::from("https://example.com/subs/vi.vtt"),
+					language: String::from("vi"),
+					label: Some(String::from("Tiếng Việt")),
+					headers: HashMap::new(),
+				}],
+				// marks the opening segment on the progress bar & enables the skip button
+				intro: Some(RangeLong {
+					start_ms: 0,
+					end_ms: 90_000,
+				}),
+				outro: Some(RangeLong {
+					start_ms: 1_500_000,
+					end_ms: 1_590_000,
+				}),
+			}),
+		}
 	}
 }
 
 impl ExampleSource {
-	// gets the latest version of aidoku from the github releases page
-	fn get_latest_aidoku_version() -> Option<String> {
-		Request::get("https://github.com/aidoku/aidoku/releases")
+	// fetches a page over the network and extracts the first <h1> via the
+	// html parser — demonstrates the net -> html pipeline of the SDK
+	fn fetch_example_title() -> Option<String> {
+		Request::get("https://example.com")
 			.ok()?
 			.html()
 			.ok()?
-			.select_first("#repo-content-pjax-container a > div > span")?
+			.select_first("h1")?
 			.text()
 	}
 }
@@ -156,15 +237,16 @@ impl ExampleSource {
 // this should probably be most sources
 impl ListingProvider for ExampleSource {
 	// this method will be called when a listing or a home section with an associated listing is opened
-	fn get_manga_list(&self, listing: Listing, _page: i32) -> Result<MangaPageResult> {
+	fn get_anime_list(&self, listing: Listing, _page: i32) -> Result<AnimePageResult> {
 		if listing.id == "test" {
 			bail!("Not supported");
 		}
-		Ok(MangaPageResult {
-			entries: vec![Manga {
+		Ok(AnimePageResult {
+			entries: vec![Anime {
 				key: String::from("1"),
-				title: String::from("Manga 1"),
-				cover: Some(String::from("https://aidoku.app/images/icon.png")),
+				source_id: String::from("en.example-source"),
+				title: String::from("Anime 1"),
+				cover: String::from(SAMPLE_COVER),
 				..Default::default()
 			}],
 			has_next_page: false,
@@ -176,19 +258,21 @@ impl ListingProvider for ExampleSource {
 // where possible, try to replicate the associated web page's layout
 impl Home for ExampleSource {
 	fn get_home(&self) -> Result<HomeLayout> {
-		let entries = self.get_search_manga_list(None, 1, Vec::new())?.entries;
-		let chapter = Chapter {
+		let entries = self
+			.get_search_anime_list(None, 1, Vec::new())?
+			.entries;
+		let episode = Episode {
 			key: String::from("1"),
-			chapter_number: Some(1.0),
-			title: Some(String::from("Chapter")),
+			episode_number: String::from("1"),
+			title: Some(String::from("Episode")),
 			date_uploaded: Some(1692318525),
 			..Default::default()
 		};
-		let manga_chapters = entries
+		let anime_episodes = entries
 			.iter()
-			.map(|manga| MangaWithChapter {
-				manga: manga.clone(),
-				chapter: chapter.clone(),
+			.map(|anime| AnimeWithEpisode {
+				anime: anime.clone(),
+				episode: episode.clone(),
 			})
 			.take(3)
 			.collect::<Vec<_>>();
@@ -197,24 +281,24 @@ impl Home for ExampleSource {
 				HomeComponent {
 					title: Some(String::from("Big Scroller")),
 					subtitle: None,
-					value: aidoku::HomeComponentValue::BigScroller {
+					value: komorei::HomeComponentValue::BigScroller {
 						entries: entries.clone(),
 						auto_scroll_interval: Some(10.0),
 					},
 				},
 				HomeComponent {
-					title: Some(String::from("Manga Chapter List")),
+					title: Some(String::from("Anime Episode List")),
 					subtitle: None,
-					value: aidoku::HomeComponentValue::MangaChapterList {
+					value: komorei::HomeComponentValue::AnimeEpisodeList {
 						page_size: None,
-						entries: manga_chapters,
+						entries: anime_episodes,
 						listing: None,
 					},
 				},
 				HomeComponent {
-					title: Some(String::from("Manga List")),
+					title: Some(String::from("Anime List")),
 					subtitle: None,
-					value: aidoku::HomeComponentValue::MangaList {
+					value: komorei::HomeComponentValue::AnimeList {
 						ranking: false,
 						page_size: None,
 						entries: entries.iter().take(2).cloned().map(|m| m.into()).collect(),
@@ -222,9 +306,9 @@ impl Home for ExampleSource {
 					},
 				},
 				HomeComponent {
-					title: Some(String::from("Manga List (Paged, Ranking)")),
+					title: Some(String::from("Anime List (Paged, Ranking)")),
 					subtitle: None,
-					value: aidoku::HomeComponentValue::MangaList {
+					value: komorei::HomeComponentValue::AnimeList {
 						ranking: true,
 						page_size: Some(3),
 						entries: entries.iter().take(8).cloned().map(|m| m.into()).collect(),
@@ -234,7 +318,7 @@ impl Home for ExampleSource {
 				HomeComponent {
 					title: Some(String::from("Scroller")),
 					subtitle: None,
-					value: aidoku::HomeComponentValue::Scroller {
+					value: komorei::HomeComponentValue::Scroller {
 						entries: entries.clone().into_iter().map(|m| m.into()).collect(),
 						listing: None,
 					},
@@ -242,8 +326,8 @@ impl Home for ExampleSource {
 				HomeComponent {
 					title: Some("Filters".into()),
 					subtitle: None,
-					value: aidoku::HomeComponentValue::Filters(vec![
-						aidoku::FilterItem::from(String::from("Action")),
+					value: komorei::HomeComponentValue::Filters(vec![
+						komorei::FilterItem::from(String::from("Action")),
 						"Adventure".into(),
 						"Fantasy".into(),
 						"Horror".into(),
@@ -255,23 +339,27 @@ impl Home for ExampleSource {
 				HomeComponent {
 					title: Some(String::from("Links")),
 					subtitle: None,
-					value: aidoku::HomeComponentValue::Links(vec![
-						aidoku::Link {
+					value: komorei::HomeComponentValue::Links(vec![
+						komorei::Link {
 							title: String::from("Website Link"),
-							value: Some(aidoku::LinkValue::Url(String::from("https://aidoku.app"))),
+							value: Some(komorei::LinkValue::Url(String::from(
+								"https://example.com",
+							))),
 							..Default::default()
 						},
-						aidoku::Link {
-							title: String::from("Manga Link"),
-							value: Some(aidoku::LinkValue::Manga(entries.first().unwrap().clone())),
+						komorei::Link {
+							title: String::from("Anime Link"),
+							value: Some(komorei::LinkValue::Anime(
+								entries.first().unwrap().clone(),
+							)),
 							..Default::default()
 						},
-						aidoku::Link {
+						komorei::Link {
 							title: String::from("Listing Link"),
-							value: Some(aidoku::LinkValue::Listing(Listing {
+							value: Some(komorei::LinkValue::Listing(Listing {
 								id: String::from("listing"),
 								name: String::from("Listing"),
-								kind: aidoku::ListingKind::List,
+								kind: komorei::ListingKind::List,
 							})),
 							..Default::default()
 						},
@@ -279,15 +367,6 @@ impl Home for ExampleSource {
 				},
 			],
 		})
-	}
-}
-
-// to provide page descriptions asynchronously, use the PageDescriptionProvider trait
-// if fetching a page description requires an additional request, use this trait,
-// otherwise just provide it when fetching the page list
-impl PageDescriptionProvider for ExampleSource {
-	fn get_page_description(&self, _page: Page) -> Result<String> {
-		Ok("# Title\n\nThis is some description\n\n## Section\n\nThis is a section.".into())
 	}
 }
 
@@ -386,7 +465,7 @@ impl DynamicListings for ExampleSource {
 		Ok(vec![Listing {
 			id: String::from("listing"),
 			name: String::from("Listing"),
-			kind: aidoku::ListingKind::List,
+			kind: komorei::ListingKind::List,
 		}])
 	}
 }
@@ -399,15 +478,8 @@ impl NotificationHandler for ExampleSource {
 	}
 }
 
-// if your source supports displaying multiple covers for a title, use the AlternateCoverProvider trait
-impl AlternateCoverProvider for ExampleSource {
-	fn get_alternate_covers(&self, _manga: Manga) -> Result<Vec<String>> {
-		Ok(vec!["https://aidoku.app/images/icon.png".into()])
-	}
-}
-
-// you can process response data from page and cover images, and use canvas apis to draw your own images
-// use the PageImageProcessor or CoverImageProcessor traits
+// you can process response data from cover images, and use canvas apis to draw your own images
+// use the CoverImageProcessor trait
 impl CoverImageProcessor for ExampleSource {
 	fn process_cover_image(&self, _response: ImageResponse) -> Result<ImageRef> {
 		let mut canvas = Canvas::new(200., 300.);
@@ -425,48 +497,50 @@ impl CoverImageProcessor for ExampleSource {
 
 // it's recommended for all sources to implement the DeepLinkHandler trait
 // the url that is passed in will have the base of any of the source's urls
-// the source should determine if the url is a link to a manga, a chapter, or a listing page,
+// the source should determine if the url is a link to an anime, an episode, or a listing page,
 // then return the appropriate DeepLinkResult to handle it.
 impl DeepLinkHandler for ExampleSource {
 	fn handle_deep_link(&self, _url: String) -> Result<Option<DeepLinkResult>> {
-		Ok(Some(DeepLinkResult::Manga {
-			key: String::from("manga_key"),
+		Ok(Some(DeepLinkResult::Anime {
+			key: String::from("anime_key"),
 		}))
 	}
 }
 
-// if your source is changing the way it formats manga and chapter keys,
+// if your source is changing the way it formats anime and episode keys,
 // implement the MigrationHandler trait to automatically handle the migration of existing data.
 // this should be paired with the breakingChangeVersion inside the source configuration.
 // if this trait isn't implemented, the app will default to showing the manual migration view.
 impl MigrationHandler for ExampleSource {
-	fn handle_manga_migration(&self, key: String) -> Result<String> {
+	fn handle_anime_migration(&self, key: String) -> Result<String> {
 		// example: add leading slash
-		if key.starts_with("/") {
+		if key.starts_with('/') {
 			Ok(key)
 		} else {
 			Ok(format!("/{key}"))
 		}
 	}
 
-	fn handle_chapter_migration(&self, _manga_key: String, chapter_key: String) -> Result<String> {
-		// example: keep chapter key as-is
-		Ok(chapter_key)
+	fn handle_episode_migration(
+		&self,
+		_anime_key: String,
+		episode_key: String,
+	) -> Result<String> {
+		// example: keep episode key as-is
+		Ok(episode_key)
 	}
 }
 
-// the register_source! macro generates the necessary wasm functions for aidoku
+// the register_source! macro generates the necessary wasm functions for the app
 register_source!(
 	ExampleSource,
 	// after the name of the source struct, list all the extra traits it implements
 	ListingProvider,
 	Home,
-	PageDescriptionProvider,
 	DynamicFilters,
 	DynamicSettings,
 	DynamicListings,
 	NotificationHandler,
-	AlternateCoverProvider,
 	CoverImageProcessor,
 	DeepLinkHandler,
 	MigrationHandler
@@ -476,23 +550,48 @@ register_source!(
 #[cfg(test)]
 mod test {
 	use super::*;
-	use aidoku_test::aidoku_test;
+	use komorei_test::komorei_test;
 
-	// all tests need to be annotated with the #[aidoku_test] attribute instead of #[test]
-	#[aidoku_test]
+	// all tests need to be annotated with the #[komorei_test] attribute instead of #[test]
+	#[komorei_test]
 	fn test_request() {
-		let version = ExampleSource::get_latest_aidoku_version();
-		println!("{:?}", version); // if the test fails (or you pass --nocapture), you can see this in the log,
-		assert!(version.is_some());
-		assert!(version.unwrap().chars().next().unwrap() == 'v');
+		let title = ExampleSource::fetch_example_title();
+		println!("{:?}", title); // if the test fails (or you pass --nocapture), you can see this in the log,
+		assert_eq!(title.as_deref(), Some("Example Domain"));
 	}
 
-	#[aidoku_test]
+	#[komorei_test]
 	fn test_js_execution() {
-		// most aidoku imports you'd want to use should also work
-		use aidoku::imports::js::JsContext;
+		// most komorei imports you'd want to use should also work
+		use komorei::imports::js::JsContext;
 		let context = JsContext::new();
 		let result = context.eval("1 + 2");
 		assert_eq!(result, Ok(String::from("3")));
+	}
+
+	#[komorei_test]
+	fn test_stream_list() {
+		let anime = Anime {
+			key: String::from("1"),
+			source_id: String::from("en.example-source"),
+			title: String::from("Anime 1"),
+			cover: String::from(SAMPLE_COVER),
+			..Default::default()
+		};
+		let episode = Episode {
+			key: String::from("1"),
+			episode_number: String::from("1"),
+			..Default::default()
+		};
+		let streams = ExampleSource.get_stream_list(anime, episode).unwrap();
+		assert_eq!(streams.len(), 2);
+		let data = ExampleSource.get_stream(
+			Anime::default(),
+			Episode::default(),
+			streams[0].clone(),
+		);
+		assert!(data.is_ok());
+		let err = komorei::KomoreiError::Message(String::from("expected"));
+		assert_eq!(err.error_code(), -1);
 	}
 }

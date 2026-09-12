@@ -1,4 +1,4 @@
-# Aidoku Source Development
+# Komorei Source Development
 
 [Introduction](ch00-00-introduction.md)
 

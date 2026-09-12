@@ -177,7 +177,7 @@ impl Html {
 	///
 	/// # Examples
 	/// ```ignore
-	/// use aidoku::imports::html::Html;
+	/// use komorei::imports::html::Html;
 	/// assert_eq!(
 	///     Html::escape("Hello &<> Å å π 新 there ¾ © »"),
 	///     "Hello &amp;&lt;&gt; Å å π 新 there ¾ © »",
@@ -193,7 +193,7 @@ impl Html {
 	///
 	/// # Examples
 	/// ```ignore
-	/// use aidoku::imports::html::Html;
+	/// use komorei::imports::html::Html;
 	/// assert_eq!(
 	///     Html::unescape("Hello &amp;&lt;&gt; Å å π 新 there ¾ © »"),
 	///     Some("Hello &<> Å å π 新 there ¾ © »".into()),
@@ -447,7 +447,7 @@ impl Element {
 	///
 	/// # Examples
 	/// ```ignore
-	/// use aidoku::imports::html::Html;
+	/// use komorei::imports::html::Html;
 	/// let html = Html::parse_with_url("<img src=\"/image.jpg\" />", "https://example.com").unwrap();
 	/// let el = html.select_first("img").unwrap();
 	/// assert_eq!(
@@ -474,7 +474,7 @@ impl Element {
 	///
 	/// # Examples
 	/// ```ignore
-	/// use aidoku::imports::html::Html;
+	/// use komorei::imports::html::Html;
 	/// let html = Html::parse("<p>Hello <b>there</b> now! </p>").unwrap();
 	/// let el = html.select_first("p").unwrap();
 	/// assert_eq!(el.text(), Some("Hello there now!".into()));
@@ -495,7 +495,7 @@ impl Element {
 	///
 	/// # Examples
 	/// ```ignore
-	/// use aidoku::imports::html::Html;
+	/// use komorei::imports::html::Html;
 	/// let html = Html::parse("<p>Hello <b>there</b> now! </p>").unwrap();
 	/// let el = html.select_first("p").unwrap();
 	/// assert_eq!(el.untrimmed_text(), Some("Hello there now! ".into()));
@@ -512,7 +512,7 @@ impl Element {
 	///
 	/// # Examples
 	/// ```ignore
-	/// use aidoku::imports::html::Html;
+	/// use komorei::imports::html::Html;
 	/// let html = Html::parse("<div><p></p></div>").unwrap();
 	/// let div = html.select_first("div").unwrap();
 	/// assert_eq!(div.html(), Some("<p></p>".into()));
@@ -529,7 +529,7 @@ impl Element {
 	///
 	/// # Examples
 	/// ```ignore
-	/// use aidoku::imports::html::Html;
+	/// use komorei::imports::html::Html;
 	/// let html = Html::parse("<div><p></p></div>").unwrap();
 	/// let div = html.select_first("div").unwrap();
 	/// assert_eq!(div.outer_html(), Some("<div><p></p></div>".into()));

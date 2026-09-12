@@ -1,4 +1,4 @@
-use aidoku_test_runner::libs::HtmlDocument;
+use komorei_test_runner::libs::HtmlDocument;
 use scraper::{ElementRef, Selector};
 
 #[test]

@@ -5,7 +5,7 @@ use super::{
 	std::{destroy, read_string_and_destroy},
 };
 use crate::{
-	AidokuError,
+	KomoreiError,
 	alloc::{String, Vec},
 	imports::std::read,
 };
@@ -257,7 +257,7 @@ impl WebView {
 	}
 
 	/// Returns all cookies in the web view cookie store.
-	pub fn get_cookies(&self) -> Result<Vec<Cookie>, AidokuError> {
+	pub fn get_cookies(&self) -> Result<Vec<Cookie>, KomoreiError> {
 		let result = unsafe { webview_get_cookies(self.rid) };
 		if let Some(error) = JsError::from(result) {
 			Err(error.into())

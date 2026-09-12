@@ -1,5 +1,5 @@
-use aidoku_cli::commands;
-use aidoku_cli::models::SourceContentRating;
+use komorei_cli::commands;
+use komorei_cli::models::SourceContentRating;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 

@@ -1,7 +1,7 @@
-//! Module for standard Aidoku source library functions.
+//! Module for standard Komorei source library functions.
 use super::{FFIResult, Ptr, Rid};
 use crate::{
-	AidokuError,
+	KomoreiError,
 	alloc::{String, Vec},
 };
 use core::ptr::null;
@@ -73,7 +73,7 @@ impl StdError {
 	}
 }
 
-/// Prints a message to the Aidoku logs.
+/// Prints a message to the Komorei logs.
 pub fn print<T: AsRef<str>>(string: T) {
 	let string = string.as_ref();
 	unsafe {
@@ -90,7 +90,7 @@ pub fn sleep(seconds: i32) {
 
 /// Encodes a value into a byte array and returns a pointer to it.
 ///
-/// Used for sending results back to Aidoku. The encoded data is prefixed with its length.
+/// Used for sending results back to Komorei. The encoded data is prefixed with its length.
 /// Note that the byte vector is forgotten after encoding, and must be manually freed (with [free_result]).
 ///
 /// # Safety
@@ -153,7 +153,7 @@ pub unsafe fn free_result(ptr: Ptr) {
 /// This function is used to send partial home layours and manga results
 /// back to the runner for faster loading.
 ///
-/// Only [HomePartialResult](crate::HomePartialResult) and [Manga](crate::Manga)
+/// Only [HomePartialResult](crate::HomePartialResult) and [Anime](crate::Anime)
 /// structs should be passed as arguments.
 pub fn send_partial_result<T: Serialize>(value: &T) {
 	let value_ptr = unsafe { encode(value) };
@@ -172,10 +172,10 @@ pub fn current_date() -> i64 {
 ///
 /// This function is exposed for the functions that the [register_source](crate::register_source)
 /// macro generates and should not be used directly.
-pub fn read<T: DeserializeOwned>(rid: Rid) -> Result<T, AidokuError> {
+pub fn read<T: DeserializeOwned>(rid: Rid) -> Result<T, KomoreiError> {
 	read_buffer(rid)
 		.and_then(|buffer| postcard::from_bytes(&buffer).ok())
-		.ok_or(AidokuError::DeserializeError)
+		.ok_or(KomoreiError::DeserializeError)
 }
 
 /// Reads a string from a descriptor.
@@ -233,7 +233,7 @@ pub fn get_utc_offset() -> i64 {
 /// # Examples
 ///
 /// ```ignore
-/// use aidoku::imports::std::parse_date;
+/// use komorei::imports::std::parse_date;
 /// let timestamp = parse_date("07-01-2025 13:00", "MM-dd-yyyy HH:mm");
 /// assert_eq!(timestamp, Some(1751374800));
 /// ```

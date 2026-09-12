@@ -3,14 +3,8 @@
 		"id": "en.example-source",
 		"name": "Example Source",
 		"version": 1,
-		"url": "https://aidoku.app",
+		"url": "https://example.com",
 		"contentRating": 0,
 		"languages": ["en"]
-	},
-	"listings": [
-		{
-			"id": "test",
-			"name": "Test"
-		}
-	]
+	}
 }

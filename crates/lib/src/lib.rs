@@ -33,9 +33,9 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 
 	let message = prelude::format!("{}", info);
 	unsafe {
-		// print the error message to aidoku logs
+		// print the error message to komorei logs
 		print(message.as_ptr(), message.len());
-		// tell aidoku we're aborting so that the unreachable instruction is not executed
+		// tell komorei we're aborting so that the unreachable instruction is not executed
 		abort();
 	};
 

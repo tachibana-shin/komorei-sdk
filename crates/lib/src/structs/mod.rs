@@ -1,4 +1,4 @@
-//! Serializable data structures that are sent between Aidoku and sources.
+//! Serializable data structures that are sent between Komorei and sources.
 
 use super::alloc::{String, Vec};
 use serde::{Deserialize, Serialize};
@@ -9,10 +9,12 @@ pub mod canvas;
 mod filter;
 mod home;
 mod setting;
+mod stream;
 
 pub use filter::*;
 pub use home::*;
 pub use setting::*;
+pub use stream::*;
 
 #[cfg(feature = "imports")]
 mod source;
@@ -20,12 +22,9 @@ mod source;
 #[cfg(feature = "imports")]
 pub use source::*;
 
-/// Context associated with a page.
-pub type PageContext = HashMap<String, String>;
-
-/// The publishing status of a manga.
+/// The publishing status of an anime.
 #[derive(Default, PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum MangaStatus {
+pub enum AnimeStatus {
 	#[default]
 	Unknown = 0,
 	Ongoing,
@@ -34,7 +33,7 @@ pub enum MangaStatus {
 	Hiatus,
 }
 
-/// The content rating of a manga.
+/// The content rating of an anime.
 #[derive(Default, PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum ContentRating {
 	#[default]
@@ -44,26 +43,11 @@ pub enum ContentRating {
 	NSFW,
 }
 
-/// The proper reading viewer for a manga.
-///
-/// This is used for automatic selection of the reader view in Aidoku.
-/// `RightToLeft` is used for manga, `LeftToRight` is for western comics,
-/// and `Webtoon` is used for manhwa and manhua.
-#[derive(Default, PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum Viewer {
-	#[default]
-	Unknown = 0,
-	LeftToRight,
-	RightToLeft,
-	Vertical,
-	Webtoon,
-}
-
-/// The preferred update strategy for a manga.
+/// The preferred update strategy for an anime.
 ///
 /// Titles marked as `Always` will be included in library refreshes by default,
 /// while `Never` will be excluded. Useful for titles that are known to be fully
-/// completed or have a static chapter list that won't change after the initial fetch.
+/// completed or have a static episode list that won't change after the initial fetch.
 #[derive(Default, PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum UpdateStrategy {
 	#[default]
@@ -71,213 +55,198 @@ pub enum UpdateStrategy {
 	Never,
 }
 
-/// A manga, comic, webtoon, or other type of content for Aidoku to read.
+/// An interactive metadata link used for filtering (genre, studio, author, ...).
+///
+/// Selecting a link in the app applies its filters to a search.
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Manga {
-	/// Unique identifier for the manga.
-	pub key: String,
-	/// Title of the manga.
-	pub title: String,
-	/// Link to the manga cover image.
-	pub cover: Option<String>,
-	/// Optional list of artists.
-	pub artists: Option<Vec<String>>,
-	/// Optional list of authors.
-	pub authors: Option<Vec<String>>,
-	/// Description of the manga.
-	pub description: Option<String>,
-	/// Link to the manga on the source website.
-	pub url: Option<String>,
-	/// Optional list of genres or tags (max: 255).
-	pub tags: Option<Vec<String>>,
-	/// Publishing status of the manga.
-	pub status: MangaStatus,
-	/// Content rating of the manga.
-	pub content_rating: ContentRating,
-	/// Preferred viewer type of the manga.
-	pub viewer: Viewer,
-	/// Ideal update strategy for the manga.
-	pub update_strategy: UpdateStrategy,
-	/// Optional date for when the manga should next be updated.
-	pub next_update_time: Option<i64>,
-	/// List of chapters.
-	pub chapters: Option<Vec<Chapter>>,
+pub struct CategoryLink {
+	/// Display name of the link.
+	pub name: String,
+	/// Filters applied when the link is selected, mapped to [FilterValue]s.
+	pub filters: Vec<FilterValue>,
 }
 
-impl Manga {
-	/// Copy the values from another manga into this one.
-	pub fn copy_from(&mut self, manga: Manga) {
-		self.key = manga.key;
-		self.title = manga.title;
-		if let Some(cover) = manga.cover {
-			self.cover = Some(cover);
-		}
-		if let Some(artists) = manga.artists {
-			self.artists = Some(artists);
-		}
-		if let Some(authors) = manga.authors {
-			self.authors = Some(authors);
-		}
-		if let Some(description) = manga.description {
-			self.description = Some(description);
-		}
-		if let Some(url) = manga.url {
-			self.url = Some(url);
-		}
-		if let Some(tags) = manga.tags {
-			self.tags = Some(tags);
-		}
-		self.status = manga.status;
-		self.content_rating = manga.content_rating;
-		self.viewer = manga.viewer;
-		self.update_strategy = manga.update_strategy;
-		if let Some(next_update_time) = manga.next_update_time {
-			self.next_update_time = Some(next_update_time);
-		}
-		if let Some(chapters) = manga.chapters {
-			self.chapters = Some(chapters);
+/// A specific season or part of a franchise.
+///
+/// Seasons are often separate anime ids in many source extensions.
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AnimeSeason {
+	/// The anime id of the season.
+	pub anime_id: String,
+	/// Title of the season.
+	pub title: String,
+	/// Unique identity. Defaults to `anime_id`; virtual seasons may override it.
+	pub id: String,
+}
+
+impl AnimeSeason {
+	/// Create a new season with the given anime id and title.
+	pub fn new(anime_id: String, title: String) -> Self {
+		Self {
+			anime_id: anime_id.clone(),
+			title,
+			id: anime_id,
 		}
 	}
 }
 
-/// A page of manga entries.
+/// An anime, series, or other type of content for Komorei to watch.
+///
+/// Usually fetched in two stages: Lite (listing) and Full (details + episodes).
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Anime {
+	/// Unique identifier for the anime.
+	pub key: String,
+	/// Identifier of the source this anime belongs to.
+	pub source_id: String,
+	/// Title of the anime.
+	pub title: String,
+	/// Original (raw) title of the anime.
+	pub original_title: String,
+	/// Link to the anime cover (poster) image.
+	pub cover: String,
+	/// Link to the anime banner image.
+	pub banner: Option<String>,
+	/// Description of the anime.
+	pub description: Option<String>,
+	/// Total number of episodes.
+	pub episode_count: i32,
+	/// Current episode label, e.g. "Tập 12/12" or "HD Vietsub".
+	pub current_episode: Option<String>,
+	/// Rating of the anime (0 to 10).
+	pub rating: Option<f32>,
+	/// Number of ratings.
+	pub rating_count: Option<i32>,
+	/// Publishing status of the anime.
+	pub status: AnimeStatus,
+	/// Year the anime was released.
+	pub release_year: Option<CategoryLink>,
+	/// List of genres.
+	pub genres: Vec<CategoryLink>,
+	/// List of authors.
+	pub authors: Vec<CategoryLink>,
+	/// Studio that produced the anime.
+	pub studio: Option<CategoryLink>,
+	/// The season this anime belongs to.
+	pub season_of: Option<CategoryLink>,
+	/// List of countries.
+	pub countries: Vec<CategoryLink>,
+	/// Whether the anime is featured (e.g. on the home banner).
+	pub is_featured: bool,
+	/// Number of views.
+	pub views: i32,
+	/// Info on the next episode airing, e.g. "Tập 13 phát sóng 20:00 thứ 7".
+	pub next_episode_air_info: Option<String>,
+	/// Quality tag of the anime, e.g. "FHD".
+	pub quality_tag: Option<String>,
+	/// List of seasons.
+	pub seasons: Vec<AnimeSeason>,
+	/// List of episodes. Only populated when `needs_chapters` is set.
+	pub episodes: Option<Vec<Episode>>,
+	/// Link to the anime on the source website.
+	pub url: Option<String>,
+}
+
+impl Anime {
+	/// Copy the values from another anime into this one.
+	///
+	/// Used to upgrade a Lite anime with full details and episodes.
+	pub fn copy_from(&mut self, anime: Anime) {
+		self.key = anime.key;
+		self.source_id = anime.source_id;
+		self.title = anime.title;
+		self.original_title = anime.original_title;
+		self.cover = anime.cover;
+		if let Some(banner) = anime.banner {
+			self.banner = Some(banner);
+		}
+		if let Some(description) = anime.description {
+			self.description = Some(description);
+		}
+		if anime.episode_count != 0 {
+			self.episode_count = anime.episode_count;
+		}
+		if let Some(current_episode) = anime.current_episode {
+			self.current_episode = Some(current_episode);
+		}
+		if let Some(rating) = anime.rating {
+			self.rating = Some(rating);
+		}
+		if let Some(rating_count) = anime.rating_count {
+			self.rating_count = Some(rating_count);
+		}
+		self.status = anime.status;
+		if let Some(release_year) = anime.release_year {
+			self.release_year = Some(release_year);
+		}
+		if !anime.genres.is_empty() {
+			self.genres = anime.genres;
+		}
+		if !anime.authors.is_empty() {
+			self.authors = anime.authors;
+		}
+		if let Some(studio) = anime.studio {
+			self.studio = Some(studio);
+		}
+		if let Some(season_of) = anime.season_of {
+			self.season_of = Some(season_of);
+		}
+		if !anime.countries.is_empty() {
+			self.countries = anime.countries;
+		}
+		if anime.views != 0 {
+			self.views = anime.views;
+		}
+		if let Some(next_episode_air_info) = anime.next_episode_air_info {
+			self.next_episode_air_info = Some(next_episode_air_info);
+		}
+		if let Some(quality_tag) = anime.quality_tag {
+			self.quality_tag = Some(quality_tag);
+		}
+		if !anime.seasons.is_empty() {
+			self.seasons = anime.seasons;
+		}
+		if let Some(episodes) = anime.episodes {
+			self.episodes = Some(episodes);
+		}
+		if let Some(url) = anime.url {
+			self.url = Some(url);
+		}
+	}
+}
+
+/// A page of anime entries.
 #[derive(Default, Clone, Debug, PartialEq, Serialize)]
-pub struct MangaPageResult {
-	/// List of manga entries.
-	pub entries: Vec<Manga>,
+pub struct AnimePageResult {
+	/// List of anime entries.
+	pub entries: Vec<Anime>,
 	/// Whether the next page is available or not.
 	pub has_next_page: bool,
 }
 
-/// A chapter of a manga.
+/// An episode of an anime.
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Chapter {
-	/// Unique identifier for the chapter.
+pub struct Episode {
+	/// Unique identifier for the episode.
 	pub key: String,
-	/// Title of the chapter (excluding volume and chapter number).
+	/// Episode number, as displayed by the source (e.g. "1", "12.5", "HD").
+	pub episode_number: String,
+	/// Title of the episode (excluding the episode number).
 	pub title: Option<String>,
-	/// Chapter number.
-	pub chapter_number: Option<f32>,
-	/// Volume number.
-	pub volume_number: Option<f32>,
-	/// Date the chapter was uploaded.
+	/// Date the episode was uploaded (unix timestamp).
 	pub date_uploaded: Option<i64>,
-	/// Optional list of groups that scanlated or published the chapter.
-	pub scanlators: Option<Vec<String>>,
-	/// Link to the chapter on the source website.
+	/// Optional thumbnail image url for the episode.
+	pub thumbnail: Option<String>,
+	/// Quality of the episode, e.g. "1080p FHD".
+	pub quality: Option<String>,
+	/// Duration of the episode in seconds (reference only; real duration comes from the stream).
+	pub duration_seconds: Option<i64>,
+	/// Link to the episode on the source website.
 	pub url: Option<String>,
-	/// Language of the chapter.
+	/// Language of the episode.
 	pub language: Option<String>,
-	/// Optional thumbnail image url for the chapter.
-	pub thumbnail: Option<String>,
-	/// Boolean indicating if the chapter is locked.
+	/// Boolean indicating if the episode is locked.
 	pub locked: bool,
-}
-
-#[cfg(feature = "imports")]
-mod __private {
-	use crate::imports::canvas::ImageRef;
-
-	#[derive(Debug, PartialEq)]
-	pub struct ImageRefPriv(pub(crate) ImageRef);
-
-	impl serde::Serialize for ImageRefPriv {
-		fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-		where
-			S: serde::Serializer,
-		{
-			self.0.serialize(serializer)
-		}
-	}
-
-	impl<'de> serde::Deserialize<'de> for ImageRefPriv {
-		fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-		where
-			D: serde::Deserializer<'de>,
-		{
-			ImageRef::deserialize(deserializer).map(ImageRefPriv)
-		}
-	}
-}
-
-/// The content of a page.
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub enum PageContent {
-	/// A url to an image, with associated context.
-	///
-	/// The context is sent to the page processor and/or image request modifier
-	/// if the source implements either.
-	Url(String, Option<PageContext>),
-	/// A markdown text string.
-	Text(String),
-	/// A raw image.
-	#[cfg(feature = "imports")]
-	Image(__private::ImageRefPriv),
-	/// A url to zip archive and a file path to an image inside the archive.
-	Zip(String, String),
-}
-
-impl PageContent {
-	/// Create a new `PageContent` with a url.
-	pub fn url<T: Into<String>>(url: T) -> Self {
-		Self::Url(url.into(), None)
-	}
-
-	/// Create a new `PageContent` with a url and context.
-	pub fn url_context<T: Into<String>>(url: T, context: PageContext) -> Self {
-		Self::Url(url.into(), Some(context))
-	}
-
-	/// Create a new `PageContent` with a markdown text string.
-	pub fn text<T: Into<String>>(text: T) -> Self {
-		Self::Text(text.into())
-	}
-
-	/// Create a new `PageContent` with a raw image.
-	#[cfg(feature = "imports")]
-	pub fn image(image: crate::imports::canvas::ImageRef) -> Self {
-		Self::Image(__private::ImageRefPriv(image))
-	}
-}
-
-/// A page for a chapter.
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct Page {
-	/// The page content.
-	pub content: PageContent,
-	/// Optional thumbnail image url for the page.
-	pub thumbnail: Option<String>,
-	/// If the page has a description.
-	pub has_description: bool,
-	/// Optional description for the page.
-	///
-	/// If `has_description` is `true` and this is `None`, [PageDescriptionProvider] will be used.
-	/// If `has_description` is `false`, this field will be ignored.
-	pub description: Option<String>,
-}
-
-impl Page {
-	/// Set the page content to be externally managed if it is an image.
-	///
-	/// This property is exposed for the functions that the [register_source](crate::register_source)
-	/// macro generates and should not be used directly.
-	#[cfg(feature = "imports")]
-	pub fn ensure_externally_managed(&mut self) {
-		if let PageContent::Image(ref mut image) = self.content {
-			image.0.externally_managed = true;
-		}
-	}
-}
-
-impl Default for Page {
-	fn default() -> Self {
-		Self {
-			content: PageContent::Text(String::default()),
-			thumbnail: None,
-			has_description: false,
-			description: None,
-		}
-	}
 }
 
 /// The display type of a listing.
@@ -288,7 +257,7 @@ pub enum ListingKind {
 	List,
 }
 
-/// A listing of manga.
+/// A listing of anime.
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Listing {
 	/// Unique identifier for the listing.

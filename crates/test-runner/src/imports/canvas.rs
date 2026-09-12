@@ -4,7 +4,7 @@ use crate::{
 	FFIResult, Ptr, Rid, WasmEnv,
 	libs::{ImageData, StoreItem},
 };
-use aidoku::canvas::{FontWeight, PathOp};
+use komorei::canvas::{FontWeight, PathOp};
 use euclid::Angle;
 use font_kit::{
 	family_name::FamilyName,
@@ -51,7 +51,7 @@ impl From<Result> for i32 {
 	}
 }
 
-fn path_to_raqote_path(path: aidoku::canvas::Path) -> raqote::Path {
+fn path_to_raqote_path(path: komorei::canvas::Path) -> raqote::Path {
 	let mut result = raqote::PathBuilder::new();
 	for op in path.ops.iter() {
 		match op {
@@ -136,7 +136,7 @@ pub fn fill(
 	b: f32,
 	a: f32,
 ) -> FFIResult {
-	let Some(path): Option<aidoku::canvas::Path> = env
+	let Some(path): Option<komorei::canvas::Path> = env
 		.data()
 		.read_item_bytes(&env, path_ptr)
 		.ok()
@@ -171,7 +171,7 @@ pub fn stroke(
 	path_ptr: Ptr,
 	style_ptr: Ptr,
 ) -> FFIResult {
-	let Some(path): Option<aidoku::canvas::Path> = env
+	let Some(path): Option<komorei::canvas::Path> = env
 		.data()
 		.read_item_bytes(&env, path_ptr)
 		.ok()
@@ -179,7 +179,7 @@ pub fn stroke(
 	else {
 		return Result::InvalidPath.into();
 	};
-	let Some(style): Option<aidoku::canvas::StrokeStyle> = env
+	let Some(style): Option<komorei::canvas::StrokeStyle> = env
 		.data()
 		.read_item_bytes(&env, style_ptr)
 		.ok()
@@ -207,14 +207,14 @@ pub fn stroke(
 		&raqote::StrokeStyle {
 			width: style.width,
 			cap: match style.cap {
-				aidoku::canvas::LineCap::Butt => LineCap::Butt,
-				aidoku::canvas::LineCap::Round => LineCap::Round,
-				aidoku::canvas::LineCap::Square => LineCap::Square,
+				komorei::canvas::LineCap::Butt => LineCap::Butt,
+				komorei::canvas::LineCap::Round => LineCap::Round,
+				komorei::canvas::LineCap::Square => LineCap::Square,
 			},
 			join: match style.join {
-				aidoku::canvas::LineJoin::Miter => LineJoin::Miter,
-				aidoku::canvas::LineJoin::Round => LineJoin::Round,
-				aidoku::canvas::LineJoin::Bevel => LineJoin::Bevel,
+				komorei::canvas::LineJoin::Miter => LineJoin::Miter,
+				komorei::canvas::LineJoin::Round => LineJoin::Round,
+				komorei::canvas::LineJoin::Bevel => LineJoin::Bevel,
 			},
 			miter_limit: style.miter_limit,
 			dash_array: style.dash_array,
@@ -306,7 +306,7 @@ pub fn new_font(mut env: FunctionEnvMut<WasmEnv>, name_ptr: Ptr, name_len: u32) 
 	env.data_mut().store.store(StoreItem::Font(font))
 }
 pub fn system_font(mut env: FunctionEnvMut<WasmEnv>, weight: u8) -> Rid {
-	let weight = match aidoku::canvas::FontWeight::from(weight) {
+	let weight = match komorei::canvas::FontWeight::from(weight) {
 		FontWeight::UltraLight => Weight::EXTRA_LIGHT,
 		FontWeight::Thin => Weight::THIN,
 		FontWeight::Light => Weight::LIGHT,

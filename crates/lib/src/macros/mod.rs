@@ -1,4 +1,4 @@
-/// Prints to Aidoku logs.
+/// Prints to Komorei logs.
 ///
 /// # Examples
 ///
@@ -19,7 +19,7 @@ macro_rules! println {
 	};
 }
 
-/// Prints to Aidoku logs if debug assertions are enabled.
+/// Prints to Komorei logs if debug assertions are enabled.
 #[macro_export]
 macro_rules! debug {
 	() => {
@@ -39,11 +39,11 @@ macro_rules! debug {
 /// Constructs an error with a message.
 ///
 /// This macro is equivalent to
-/// <code>AidokuError::message(format!($args\...))</code>.
+/// <code>KomoreiError::message(format!($args\...))</code>.
 #[macro_export]
 macro_rules! error {
 	($($arg:tt)*) => {
-		$crate::AidokuError::message($crate::prelude::format!($($arg)*))
+		$crate::KomoreiError::message($crate::prelude::format!($($arg)*))
 	};
 }
 
@@ -53,7 +53,7 @@ macro_rules! error {
 /// <code>return Err(error!($args\...))</code>.
 ///
 /// The surrounding function's or closure's return value is required to be
-/// <code>Result&lt;_, [aidoku::AidokuError][crate::AidokuError]&gt;</code>.
+/// <code>Result&lt;_, [KomoreiError][crate::KomoreiError]&gt;</code>.
 #[macro_export]
 macro_rules! bail {
 	($($arg:tt)*) => {
@@ -61,7 +61,7 @@ macro_rules! bail {
 	};
 }
 
-/// Registers a source for use with Aidoku.
+/// Registers a source for use with Komorei.
 ///
 /// The first argument should be the struct that implements the Source trait, and the
 /// following arguments should be all the additional traits that the source implements.
@@ -88,7 +88,7 @@ macro_rules! register_source {
 		}
 
 		fn __handle_result<T: $crate::serde::Serialize>(
-			result: ::core::result::Result<T, $crate::imports::error::AidokuError>,
+			result: ::core::result::Result<T, $crate::imports::error::KomoreiError>,
 		) -> i32 {
 			match &result {
 				::core::result::Result::Ok(result) => {
@@ -108,10 +108,10 @@ macro_rules! register_source {
 			}
 		}
 
-		fn __handle_error(error: &$crate::imports::error::AidokuError) -> i32 {
+		fn __handle_error(error: &$crate::imports::error::KomoreiError) -> i32 {
 			$crate::prelude::println!("Error: {:?}", error);
 			match error {
-				$crate::imports::error::AidokuError::Message(string) => {
+				$crate::imports::error::KomoreiError::Message(string) => {
 					let mut buffer = (-1 as i32).to_le_bytes().to_vec();
 
 					buffer.extend_from_slice(&[0, 0, 0, 0, 0, 0, 0, 0]);
@@ -146,8 +146,8 @@ macro_rules! register_source {
 		}
 
 		#[unsafe(no_mangle)]
-		#[unsafe(export_name = "get_search_manga_list")]
-		pub unsafe extern "C" fn __wasm_get_search_manga_list(
+		#[unsafe(export_name = "get_search_anime_list")]
+		pub unsafe extern "C" fn __wasm_get_search_anime_list(
 			query_descriptor: i32,
 			page: i32,
 			filters_descriptor: i32,
@@ -159,54 +159,72 @@ macro_rules! register_source {
 				return -1;
 			};
 
-			let result = __source().get_search_manga_list(query, page, filters);
+			let result = __source().get_search_anime_list(query, page, filters);
 			__handle_result(result)
 		}
 
 		#[unsafe(no_mangle)]
-		#[unsafe(export_name = "get_manga_update")]
-		pub unsafe extern "C" fn __wasm_get_manga_update(
-			manga_descriptor: i32,
+		#[unsafe(export_name = "get_anime_update")]
+		pub unsafe extern "C" fn __wasm_get_anime_update(
+			anime_descriptor: i32,
 			needs_details: bool,
 			needs_chapters: bool,
 		) -> i32 {
-			let ::core::result::Result::Ok(manga) =
-				$crate::imports::std::read::<$crate::Manga>(manga_descriptor)
+			let ::core::result::Result::Ok(anime) =
+				$crate::imports::std::read::<$crate::Anime>(anime_descriptor)
 			else {
 				return -1;
 			};
 
-			let result = __source().get_manga_update(manga, needs_details, needs_chapters);
+			let result = __source().get_anime_update(anime, needs_details, needs_chapters);
 			__handle_result(result)
 		}
 
 		#[unsafe(no_mangle)]
-		#[unsafe(export_name = "get_page_list")]
-		pub unsafe extern "C" fn __wasm_get_page_list(
-			manga_descriptor: i32,
-			chapter_descriptor: i32,
+		#[unsafe(export_name = "get_stream_list")]
+		pub unsafe extern "C" fn __wasm_get_stream_list(
+			anime_descriptor: i32,
+			episode_descriptor: i32,
 		) -> i32 {
-			let ::core::result::Result::Ok(manga) =
-				$crate::imports::std::read::<$crate::Manga>(manga_descriptor)
+			let ::core::result::Result::Ok(anime) =
+				$crate::imports::std::read::<$crate::Anime>(anime_descriptor)
 			else {
 				return -1;
 			};
-			let ::core::result::Result::Ok(chapter) =
-				$crate::imports::std::read::<$crate::Chapter>(chapter_descriptor)
+			let ::core::result::Result::Ok(episode) =
+				$crate::imports::std::read::<$crate::Episode>(episode_descriptor)
 			else {
 				return -2;
 			};
 
-			let result = __source()
-				.get_page_list(manga, chapter)
-				.map(|pages| {
-					pages.into_iter()
-						.map(|mut page| {
-							page.ensure_externally_managed();
-							page
-						})
-						.collect::<$crate::alloc::Vec<_>>()
-				});
+			let result = __source().get_stream_list(anime, episode);
+			__handle_result(result)
+		}
+
+		#[unsafe(no_mangle)]
+		#[unsafe(export_name = "get_stream")]
+		pub unsafe extern "C" fn __wasm_get_stream(
+			anime_descriptor: i32,
+			episode_descriptor: i32,
+			stream_descriptor: i32,
+		) -> i32 {
+			let ::core::result::Result::Ok(anime) =
+				$crate::imports::std::read::<$crate::Anime>(anime_descriptor)
+			else {
+				return -1;
+			};
+			let ::core::result::Result::Ok(episode) =
+				$crate::imports::std::read::<$crate::Episode>(episode_descriptor)
+			else {
+				return -2;
+			};
+			let ::core::result::Result::Ok(stream) =
+				$crate::imports::std::read::<$crate::StreamInfo>(stream_descriptor)
+			else {
+				return -3;
+			};
+
+			let result = __source().get_stream(anime, episode, stream);
 			__handle_result(result)
 		}
 
@@ -217,8 +235,8 @@ macro_rules! register_source {
 
 	(@single ListingProvider) => {
 		#[unsafe(no_mangle)]
-		#[unsafe(export_name = "get_manga_list")]
-		pub unsafe extern "C" fn __wasm_get_manga_list(listing_descriptor: i32, page: i32) -> i32 {
+		#[unsafe(export_name = "get_anime_list")]
+		pub unsafe extern "C" fn __wasm_get_anime_list(listing_descriptor: i32, page: i32) -> i32 {
 			let ::core::result::Result::Ok(listing) =
 				$crate::imports::std::read::<$crate::Listing>(listing_descriptor)
 			else {
@@ -226,7 +244,7 @@ macro_rules! register_source {
 			};
 
 			use $crate::ListingProvider;
-			let result = __source().get_manga_list(listing, page);
+			let result = __source().get_anime_list(listing, page);
 			__handle_result(result)
 		}
 	};
@@ -271,37 +289,6 @@ macro_rules! register_source {
 		}
 	};
 
-	(@single PageImageProcessor) => {
-		#[unsafe(no_mangle)]
-		#[unsafe(export_name = "process_page_image")]
-		pub unsafe extern "C" fn __wasm_process_page_image(
-			response_descriptor: i32,
-			context_descriptor: i32,
-		) -> i32 {
-			let ::core::result::Result::Ok(response) =
-				$crate::imports::std::read::<$crate::ImageResponse>(response_descriptor)
-			else {
-				return -1;
-			};
-			let context: ::core::option::Option<$crate::PageContext> = if context_descriptor < 0 {
-				None
-			} else if let ::core::result::Result::Ok(context) =
-				$crate::imports::std::read::<$crate::PageContext>(context_descriptor)
-			{
-				Some(context)
-			} else {
-				return -2;
-			};
-
-			use $crate::PageImageProcessor;
-			let mut result = __source().process_page_image(response, context);
-			if let Ok(image_ref) = result.as_mut() {
-				image_ref.externally_managed = true;
-			}
-			__handle_result(result.map(|r| r.rid))
-		}
-	};
-
 	(@single CoverImageProcessor) => {
 		#[unsafe(no_mangle)]
 		#[unsafe(export_name = "process_cover_image")]
@@ -318,67 +305,6 @@ macro_rules! register_source {
 				image_ref.externally_managed = true;
 			}
 			__handle_result(result.map(|r| r.rid))
-		}
-	};
-
-	(@single ImageRequestProvider) => {
-		#[unsafe(no_mangle)]
-		#[unsafe(export_name = "get_image_request")]
-		pub unsafe extern "C" fn __wasm_get_image_request(
-			url_descriptor: i32,
-			context_descriptor: i32,
-		) -> i32 {
-			let ::core::result::Result::Ok(url) =
-				$crate::imports::std::read::<$crate::alloc::String>(url_descriptor)
-			else {
-				return -1;
-			};
-			let context: ::core::option::Option<$crate::PageContext> = if context_descriptor < 0 {
-				None
-			} else if let ::core::result::Result::Ok(context) =
-				$crate::imports::std::read::<$crate::PageContext>(context_descriptor)
-			{
-				Some(context)
-			} else {
-				return -2;
-			};
-
-			use $crate::ImageRequestProvider;
-			let mut result = __source().get_image_request(url, context);
-			if let Ok(request) = result.as_mut() {
-				request.should_close = false;
-			}
-			__handle_result(result.map(|r| r.rid))
-		}
-	};
-
-	(@single PageDescriptionProvider) => {
-		#[unsafe(no_mangle)]
-		#[unsafe(export_name = "get_page_description")]
-		pub unsafe extern "C" fn __wasm_get_page_description(page_descriptor: i32) -> i32 {
-			let ::core::result::Result::Ok(page) =
-				$crate::imports::std::read::<$crate::Page>(page_descriptor)
-			else {
-				return -1;
-			};
-			use $crate::PageDescriptionProvider;
-			let result = __source().get_page_description(page);
-			__handle_result(result)
-		}
-	};
-
-	(@single AlternateCoverProvider) => {
-		#[unsafe(no_mangle)]
-		#[unsafe(export_name = "get_alternate_covers")]
-		pub unsafe extern "C" fn __wasm_get_alternate_covers(manga_descriptor: i32) -> i32 {
-			let ::core::result::Result::Ok(manga) =
-				$crate::imports::std::read::<$crate::Manga>(manga_descriptor)
-			else {
-				return -1;
-			};
-			use $crate::AlternateCoverProvider;
-			let result = __source().get_alternate_covers(manga);
-			__handle_result(result)
 		}
 	};
 
@@ -485,26 +411,26 @@ macro_rules! register_source {
 		#[unsafe(export_name = "handle_key_migration")]
 		pub unsafe extern "C" fn __wasm_handle_key_migration(
 			key_kind: i32,
-			manga_key_descriptor: i32,
-			chapter_key_descriptor: i32,
+			anime_key_descriptor: i32,
+			episode_key_descriptor: i32,
 		) -> i32 {
-			let ::core::result::Result::Ok(manga_key) =
-				$crate::imports::std::read::<$crate::alloc::String>(manga_key_descriptor)
+			let ::core::result::Result::Ok(anime_key) =
+				$crate::imports::std::read::<$crate::alloc::String>(anime_key_descriptor)
 			else {
 				return -1;
 			};
 			use $crate::MigrationHandler;
 			let result = match key_kind {
-				// manga
-				0 => __source().handle_manga_migration(manga_key),
-				// chapter
+				// anime
+				0 => __source().handle_anime_migration(anime_key),
+				// episode
 				1 => {
-					let ::core::result::Result::Ok(chapter_key) =
-						$crate::imports::std::read::<$crate::alloc::String>(chapter_key_descriptor)
+					let ::core::result::Result::Ok(episode_key) =
+						$crate::imports::std::read::<$crate::alloc::String>(episode_key_descriptor)
 					else {
 						return -2;
 					};
-					__source().handle_chapter_migration(manga_key, chapter_key)
+					__source().handle_episode_migration(anime_key, episode_key)
 				}
 				_ => return -3,
 			};

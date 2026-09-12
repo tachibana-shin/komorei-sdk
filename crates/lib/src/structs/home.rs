@@ -1,4 +1,4 @@
-use super::{Chapter, FilterValue, Listing, Manga};
+use super::{Anime, Episode, FilterValue, Listing};
 use serde::{Deserialize, Serialize};
 
 extern crate alloc;
@@ -54,35 +54,35 @@ pub enum HomeComponentValue {
 		width: Option<i32>,
 		height: Option<i32>,
 	},
-	/// A large scroller of manga.
+	/// A large scroller of anime.
 	///
-	/// This component displays the title, author, cover image, description,
-	/// content rating and tags of the provided manga entries.
+	/// This component displays the title, authors, cover image, description,
+	/// content rating and tags of the provided anime entries.
 	BigScroller {
-		entries: Vec<Manga>,
+		entries: Vec<Anime>,
 		auto_scroll_interval: Option<f32>,
 	},
-	/// A small scroller of manga.
+	/// A small scroller of anime.
 	///
 	/// The subtitles of the provided links are not used.
 	Scroller {
 		entries: Vec<Link>,
 		listing: Option<Listing>,
 	},
-	/// A list of manga.
-	MangaList {
+	/// A list of anime.
+	AnimeList {
 		/// If the list should be displayed with ranking numbers.
 		ranking: bool,
 		page_size: Option<i32>,
 		entries: Vec<Link>,
 		listing: Option<Listing>,
 	},
-	/// A list of manga chapters.
+	/// A list of anime episodes.
 	///
-	/// The relative time to the chapter's date uploaded is displayed if provided.
-	MangaChapterList {
+	/// The relative time to the episode's date uploaded is displayed if provided.
+	AnimeEpisodeList {
 		page_size: Option<i32>,
-		entries: Vec<MangaWithChapter>,
+		entries: Vec<AnimeWithEpisode>,
 		listing: Option<Listing>,
 	},
 	/// A collection of links to filtered listings.
@@ -120,9 +120,9 @@ impl HomeComponentValue {
 		}
 	}
 
-	/// Creates an empty manga list component.
-	pub fn empty_manga_list() -> Self {
-		Self::MangaList {
+	/// Creates an empty anime list component.
+	pub fn empty_anime_list() -> Self {
+		Self::AnimeList {
 			ranking: false,
 			page_size: None,
 			entries: Vec::new(),
@@ -130,9 +130,9 @@ impl HomeComponentValue {
 		}
 	}
 
-	/// Creates an empty manga chapter list component.
-	pub fn empty_manga_chapter_list() -> Self {
-		Self::MangaChapterList {
+	/// Creates an empty anime episode list component.
+	pub fn empty_anime_episode_list() -> Self {
+		Self::AnimeEpisodeList {
 			page_size: None,
 			entries: Vec::new(),
 			listing: None,
@@ -150,11 +150,11 @@ impl HomeComponentValue {
 	}
 }
 
-/// A paired manga and chapter.
+/// A paired anime and episode.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct MangaWithChapter {
-	pub manga: Manga,
-	pub chapter: Chapter,
+pub struct AnimeWithEpisode {
+	pub anime: Anime,
+	pub episode: Episode,
 }
 
 /// A link to a listing that uses the provided filters.
@@ -191,12 +191,12 @@ pub struct Link {
 	pub value: Option<LinkValue>,
 }
 
-/// A link value that can be opened by the Aidoku app.
+/// A link value that can be opened by the Komorei app.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LinkValue {
 	Url(String),
 	Listing(Listing),
-	Manga(Manga),
+	Anime(Anime),
 }
 
 impl Default for LinkValue {
@@ -205,17 +205,23 @@ impl Default for LinkValue {
 	}
 }
 
-impl From<Manga> for Link {
-	fn from(value: Manga) -> Self {
+impl From<Anime> for Link {
+	fn from(value: Anime) -> Self {
+		let authors = value
+			.authors
+			.iter()
+			.map(|a| a.name.clone())
+			.collect::<Vec<String>>()
+			.join(", ");
 		Link {
 			title: value.title.clone(),
-			subtitle: value
-				.authors
-				.as_ref()
-				.map(|a| a.join(", "))
-				.or(value.description.clone()),
-			image_url: value.cover.clone(),
-			value: Some(LinkValue::Manga(value)),
+			subtitle: if authors.is_empty() {
+				value.description.clone()
+			} else {
+				Some(authors)
+			},
+			image_url: Some(value.cover.clone()),
+			value: Some(LinkValue::Anime(value)),
 		}
 	}
 }

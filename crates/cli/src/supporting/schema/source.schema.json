@@ -1,6 +1,6 @@
 {
 	"$schema": "http://json-schema.org/draft-07/schema",
-	"title": "Aidoku source JSON specification",
+	"title": "Komorei source JSON specification",
 	"definitions": {
 		"sourceInfo": {
 			"type": "object",
@@ -32,7 +32,7 @@
 				},
 				"urls": {
 					"type": "array",
-					"description": "A list of base URLs for the source. The first URL is used by default, but if `allowsBaseUrlSelect` is specified in the config, an option to select a base URL is provided.",
+					"description": "A list of alternative base URLs for the source.",
 					"items": {
 						"type": "string"
 					},
@@ -54,108 +54,22 @@
 				},
 				"minAppVersion": {
 					"type": "string",
-					"description": "Optional minimum version of Aidoku to require for installing the source.",
+					"description": "Optional minimum version of Komorei to require for installing the source.",
 					"pattern": "\\d\\.\\d"
 				},
 				"maxAppVersion": {
 					"type": "string",
-					"description": "Optional maximum version of Aidoku to require for installing the source.",
+					"description": "Optional maximum version of Komorei to require for installing the source.",
 					"pattern": "\\d\\.\\d"
 				}
 			},
 			"required": ["id", "name", "version", "languages"]
-		},
-		"listing": {
-			"oneOf": [
-				{
-					"type": "object",
-					"properties": {
-						"id": {
-							"type": "string",
-							"description": "The unique identifier of the source listing."
-						},
-						"name": {
-							"type": "string",
-							"description": "The name of the source listing displayed to users. If not specified, the id is used."
-						},
-						"kind": {
-							"type": "integer",
-							"description": "The type of the source listing. The default value (0) is a grid, but it can also be a list (1).",
-							"default": 0,
-							"minimum": 0,
-							"maximum": 1
-						}
-					},
-					"required": ["id"]
-				},
-				{
-					"type": "string",
-					"description": "The unique identifier of the source listing, which is also used as the name."
-				}
-			]
-		},
-		"config": {
-			"type": "object",
-			"properties": {
-				"languageSelectType": {
-					"type": "string",
-					"enum": ["single", "multi"],
-					"default": "single",
-					"description": "Whether the language selection setting should allow multiple languages or a single language to be selected. The selected language(s) can be accessed via the `languages` defaults key. Default is 'single'."
-				},
-				"supportsArtistSearch": {
-					"type": "boolean",
-					"default": false,
-					"description": "Whether the source supports searching by artist name. If a text filter with the id \"artist\" is provided by the source, this is automatically enabled. When searching by artist, a text filter value with the id \"artist\" is given."
-				},
-				"supportsAuthorSearch": {
-					"type": "boolean",
-					"default": false,
-					"description": "Whether the source supports searching by author name. If a text filter with the id \"author\" is provided by the source, this is automatically enabled. When searching by author, a text filter value with the id \"author\" is given."
-				},
-				"supportsTagSearch": {
-					"type": "boolean",
-					"default": false,
-					"description": "Whether the source supports searching by tag name. If any select or multi-select filters with the \"isGenre\" property set to true are provided by the source, those tags are marked searchable. Otherwise, this option enables searching for all tags. When searching by tag with this option enabled, a select filter value with the id \"genre\" is given."
-				},
-				"allowsBaseUrlSelect": {
-					"type": "boolean",
-					"default": false,
-					"description": "Whether the source supports selecting a URL from the provided list of source base URLs. The selected url can be accessed via the `url` defaults key."
-				},
-				"breakingChangeVersion": {
-					"type": "integer",
-					"description": "An indicator of a version that caused a breaking change and requires migration. Users on any version of the source below the indicated version will be prompted to migrate items after updating. Automatic migration functionality can be implemented by the source via the `MigrationHandler` trait.",
-					"minimum": 2
-				},
-				"hidesFiltersWhileSearching": {
-					"type": "boolean",
-					"default": false,
-					"description": "Whether the source hides filters with a search query."
-				},
-				"maximumParallelRequests": {
-					"type": "integer",
-					"description": "The maximum allowable parallel requests the source can handle (e.g. when downloading pages).",
-					"minimum": 1,
-					"maximum": 5,
-					"default": 5
-				}
-			}
 		}
 	},
 	"type": "object",
 	"properties": {
 		"info": {
 			"$ref": "#/definitions/sourceInfo"
-		},
-		"listings": {
-			"type": "array",
-			"items": {
-				"$ref": "#/definitions/listing"
-			}
-		},
-		"config": {
-			"$ref": "#/definitions/config"
 		}
 	},
 	"required": ["info"]

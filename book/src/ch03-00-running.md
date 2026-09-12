@@ -1,21 +1,18 @@
 # Running
 
-After compiling your source with `aidoku package` (or `aidoku pkg`), which generates the
-`package.aix` file, you have a few options for running.
+After compiling your source with `komorei package`, which generates the `package.krx` file, you have
+a few options for running.
 
-## Xcode
+## Android Device / Emulator
 
-If you are running macOS and have Xcode installed, a convenient method may be using the iOS
-simulator for testing sources, but it requires a more complex setup. Since Aidoku is open source,
-you can clone the [GitHub repo]() and install it to a simulator. Then, simply drag and drop the
-"package.aix" file onto the simulator. If Aidoku is attached to the debugger in Xcode, logs will be
-displayed in the Xcode log viewer.
+Since Komorei is an Android app, you can clone the [Komorei app repository]() and build it with
+Android Studio, then run it on a device or emulator. Sources can be transferred directly to the
+device and opened in the app to install.
 
-## Physical Device
+## Source Lists
 
-Otherwise, you can choose to either transfer the aix file to the device manually (e.g. via AirDrop),
-or serve a source list with `aidoku serve package.aix`. The latter method will give you a
-`localhost` URL that you can add as a source list in Aidoku on any device connected to the same
-network. Your source can then be installed from the "add source" view inside Aidoku, and will show
-as an update if you increment the source version number and recompile. Note that you may need to
-pull down to refresh the source lists on the browse tab.
+You can serve a source list on your local network with `komorei serve package.krx`. This will give
+you a `localhost` URL that you can add as a source list in Komorei on any device connected to the
+same network. Your source can then be installed from the "add source" view inside Komorei, and will
+show as an update if you increment the source version number and recompile. Note that you may need
+to pull down to refresh the source lists on the browse tab.

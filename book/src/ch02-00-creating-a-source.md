@@ -1,12 +1,12 @@
 # Creating a Source
 
-With Rust and the `aidoku` cli tool installed, you are ready to create an Aidoku source.
+With Rust and the `komorei` cli tool installed, you are ready to create a Komorei source.
 
-To create a new project, you can use `aidoku` in a similar fashion as `cargo` to initialize the
+To create a new project, you can use `komorei` in a similar fashion as `cargo` to initialize the
 required files and directory structure:
 
 ```sh
-aidoku init source_dir
+komorei init source_dir
 ```
 
 You will then be prompted to enter the following parameters:
@@ -25,13 +25,13 @@ additional functionality for your source. We will explain this in the next secti
 
 ## Packaging the Source
 
-To compile the Rust program and package the resource files together in an `aix` file, you can run
+To compile the Rust program and package the resource files together in a `krx` file, you can run
 the following command:
 
 ```sh
-aidoku package
+komorei package
 ```
 
-If the build succeeds, you will have a resulting `package.aix` file in your current directory that
-can be installed in Aidoku. We will explain in a later chapter the best methods for installing and
+If the build succeeds, you will have a resulting `package.krx` file in your current directory that
+can be installed in Komorei. We will explain in a later chapter the best methods for installing and
 iterating through development builds.

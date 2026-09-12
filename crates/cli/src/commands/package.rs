@@ -1,4 +1,4 @@
-//! Build and package an Aidoku source.
+//! Build and package a Komorei source.
 use anyhow::{Context, anyhow};
 use std::io::prelude::*;
 
@@ -118,7 +118,7 @@ pub fn run(path: Option<std::path::PathBuf>) -> anyhow::Result<()> {
 	}
 
 	// zip payload directory
-	let zip_output = current_path.join("package.aix");
+	let zip_output = current_path.join("package.krx");
 	create_zip(payload_dir.as_path(), zip_output.as_path())
 		.context("Failed to compress payload directory")?;
 

@@ -1,44 +1,47 @@
 use super::{
-	Chapter, Filter, FilterValue, HashMap, HomeLayout, Listing, Manga, MangaPageResult, Page,
-	PageContext, Setting,
+	Anime, AnimePageResult, Episode, Filter, FilterValue, HashMap, HomeLayout, Listing, Setting,
+	StreamData, StreamInfo,
 };
 use crate::alloc::{String, Vec};
-use crate::imports::{canvas::ImageRef, net::Request};
+use crate::imports::canvas::ImageRef;
 use serde::{Deserialize, Serialize, ser::SerializeStruct};
 
-pub use crate::imports::error::{AidokuError, Result};
+pub use crate::imports::error::{KomoreiError, Result};
 
-/// The required functions an Aidoku source must implement.
+/// The required functions a Komorei source must implement.
 pub trait Source {
 	/// Called to initialize a source.
 	///
 	/// If a source requires any setup before other functions are called, it should happen here.
 	fn new() -> Self;
 
-	/// Returns the manga for a search query with filters.
-	fn get_search_manga_list(
+	/// Returns the anime for a search query with filters.
+	fn get_search_anime_list(
 		&self,
 		query: Option<String>,
 		page: i32,
 		filters: Vec<FilterValue>,
-	) -> Result<MangaPageResult>;
+	) -> Result<AnimePageResult>;
 
-	/// Updates a given manga with new details and chapters, as requested.
-	fn get_manga_update(
+	/// Updates a given anime with new details and chapters (episodes), as requested.
+	fn get_anime_update(
 		&self,
-		manga: Manga,
+		anime: Anime,
 		needs_details: bool,
 		needs_chapters: bool,
-	) -> Result<Manga>;
+	) -> Result<Anime>;
 
-	/// Returns the pages for a given manga chapter.
-	fn get_page_list(&self, manga: Manga, chapter: Chapter) -> Result<Vec<Page>>;
+	/// Returns the playable streams (servers) for a given anime episode.
+	fn get_stream_list(&self, anime: Anime, episode: Episode) -> Result<Vec<StreamInfo>>;
+
+	/// Resolves the stream data (media url, headers, subtitles) for a given stream.
+	fn get_stream(&self, anime: Anime, episode: Episode, stream: StreamInfo) -> Result<StreamData>;
 }
 
 /// A source that provides listings.
 pub trait ListingProvider: Source {
-	/// Returns the manga for the provided listing.
-	fn get_manga_list(&self, listing: Listing, page: i32) -> Result<MangaPageResult>;
+	/// Returns the anime for the provided listing.
+	fn get_anime_list(&self, listing: Listing, page: i32) -> Result<AnimePageResult>;
 }
 
 /// A source that provides a home layout.
@@ -61,36 +64,9 @@ pub trait DynamicSettings: Source {
 	fn get_dynamic_settings(&self) -> Result<Vec<Setting>>;
 }
 
-/// A source that processes page image data after being fetched.
-pub trait PageImageProcessor: Source {
-	fn process_page_image(
-		&self,
-		response: ImageResponse,
-		context: Option<PageContext>,
-	) -> Result<ImageRef>;
-}
-
 /// A source that processes cover image data after being fetched.
 pub trait CoverImageProcessor: Source {
 	fn process_cover_image(&self, response: ImageResponse) -> Result<ImageRef>;
-}
-
-/// A source that provides requests for images.
-///
-/// By default, Aidoku will request covers, thumbnails, and pages without headers.
-/// This trait can be used to override the requests for source images.
-pub trait ImageRequestProvider: Source {
-	fn get_image_request(&self, url: String, context: Option<PageContext>) -> Result<Request>;
-}
-
-/// A source that provides dynamic descriptions for pages.
-pub trait PageDescriptionProvider: Source {
-	fn get_page_description(&self, page: Page) -> Result<String>;
-}
-
-/// A source that provides multiple cover images.
-pub trait AlternateCoverProvider: Source {
-	fn get_alternate_covers(&self, manga: Manga) -> Result<Vec<String>>;
 }
 
 /// A source that provides a programmatic base url.
@@ -110,7 +86,7 @@ pub trait NotificationHandler: Source {
 /// A source that handles deep links.
 ///
 /// If a url that is contained in one of the source's provided base urls is opened
-/// in Aidoku, it will be sent to the given source to handle.
+/// in Komorei, it will be sent to the given source to handle.
 pub trait DeepLinkHandler: Source {
 	fn handle_deep_link(&self, url: String) -> Result<Option<DeepLinkResult>>;
 }
@@ -131,19 +107,18 @@ pub trait WebLoginHandler: Source {
 
 /// A source that handles key migration.
 ///
-/// If a source provides a "breakingChangeVersion" in its configuration, these functions will be
-/// called with all of a user's local manga and chapter keys to migrate them after updating.
-/// These functions should return the new key to replace the old one.
+/// These functions are called with all of a user's local anime and episode keys to
+/// migrate them after an update. They should return the new key to replace the old one.
 pub trait MigrationHandler: Source {
-	fn handle_manga_migration(&self, key: String) -> Result<String>;
-	fn handle_chapter_migration(&self, manga_key: String, chapter_key: String) -> Result<String>;
+	fn handle_anime_migration(&self, key: String) -> Result<String>;
+	fn handle_episode_migration(&self, anime_key: String, episode_key: String) -> Result<String>;
 }
 
 /// A result of a deep link handling.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DeepLinkResult {
-	Manga { key: String },
-	Chapter { manga_key: String, key: String },
+	Anime { key: String },
+	Episode { anime_key: String, key: String },
 	Listing(Listing),
 }
 
@@ -154,19 +129,19 @@ impl Serialize for DeepLinkResult {
 	{
 		let mut state = serializer.serialize_struct("DeepLinkResult", 3)?;
 		match self {
-			DeepLinkResult::Manga { key } => {
-				state.serialize_field("manga_key", &Some(key))?;
-				state.serialize_field("chapter_key", &Option::<String>::None)?;
+			DeepLinkResult::Anime { key } => {
+				state.serialize_field("anime_key", &Some(key))?;
+				state.serialize_field("episode_key", &Option::<String>::None)?;
 				state.serialize_field("listing", &Option::<Listing>::None)?;
 			}
-			DeepLinkResult::Chapter { manga_key, key } => {
-				state.serialize_field("manga_key", &Some(manga_key))?;
-				state.serialize_field("chapter_key", &Some(key))?;
+			DeepLinkResult::Episode { anime_key, key } => {
+				state.serialize_field("anime_key", &Some(anime_key))?;
+				state.serialize_field("episode_key", &Some(key))?;
 				state.serialize_field("listing", &Option::<Listing>::None)?;
 			}
 			DeepLinkResult::Listing(listing) => {
-				state.serialize_field("manga_key", &Option::<String>::None)?;
-				state.serialize_field("chapter_key", &Option::<String>::None)?;
+				state.serialize_field("anime_key", &Option::<String>::None)?;
+				state.serialize_field("episode_key", &Option::<String>::None)?;
 				state.serialize_field("listing", &Some(listing))?;
 			}
 		}
