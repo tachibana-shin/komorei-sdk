@@ -437,4 +437,74 @@ macro_rules! register_source {
 			__handle_result(result)
 		}
 	};
+
+	(@single SegmentUrlInterceptor) => {
+		#[unsafe(no_mangle)]
+		#[unsafe(export_name = "intercept_segment_url")]
+		pub unsafe extern "C" fn __wasm_intercept_segment_url(
+			stream_data_descriptor: i32,
+			url_descriptor: i32,
+		) -> i32 {
+			// a descriptor of 0 means no stream data was provided
+			let stream_data = if stream_data_descriptor == 0 {
+				None
+			} else {
+				let ::core::result::Result::Ok(stream_data) =
+					$crate::imports::std::read::<$crate::StreamData>(stream_data_descriptor)
+				else {
+					return -1;
+				};
+				Some(stream_data)
+			};
+			let ::core::result::Result::Ok(url) =
+				$crate::imports::std::read::<$crate::alloc::String>(url_descriptor)
+			else {
+				return -2;
+			};
+			use $crate::SegmentUrlInterceptor;
+			let result = __source().intercept_segment_url(stream_data.as_ref(), url);
+			__handle_result(::core::result::Result::Ok::<
+				$crate::alloc::String,
+				$crate::imports::error::KomoreiError,
+			>(result))
+		}
+	};
+
+	(@single SegmentDataInterceptor) => {
+		#[unsafe(no_mangle)]
+		#[unsafe(export_name = "intercept_segment_data")]
+		pub unsafe extern "C" fn __wasm_intercept_segment_data(
+			stream_data_descriptor: i32,
+			url_descriptor: i32,
+			data_descriptor: i32,
+		) -> i32 {
+			// a descriptor of 0 means no stream data was provided
+			let stream_data = if stream_data_descriptor == 0 {
+				None
+			} else {
+				let ::core::result::Result::Ok(stream_data) =
+					$crate::imports::std::read::<$crate::StreamData>(stream_data_descriptor)
+				else {
+					return -1;
+				};
+				Some(stream_data)
+			};
+			let ::core::result::Result::Ok(url) =
+				$crate::imports::std::read::<$crate::alloc::String>(url_descriptor)
+			else {
+				return -2;
+			};
+			let ::core::result::Result::Ok(data) =
+				$crate::imports::std::read::<$crate::alloc::Vec<u8>>(data_descriptor)
+			else {
+				return -3;
+			};
+			use $crate::SegmentDataInterceptor;
+			let result = __source().intercept_segment_data(stream_data.as_ref(), url, &data);
+			__handle_result(::core::result::Result::Ok::<
+				$crate::alloc::Vec<u8>,
+				$crate::imports::error::KomoreiError,
+			>(result))
+		}
+	};
 }

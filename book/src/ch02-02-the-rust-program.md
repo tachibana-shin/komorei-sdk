@@ -37,6 +37,16 @@ The `Source` trait has four required functions:
   resolves the playable media data (url, headers, subtitles, intro/outro ranges) for a given stream.
   Returning `is_content: false` tells the app to fetch the url itself before playback.
 
+Sources that serve signed or obfuscated media can additionally implement the
+[SegmentUrlInterceptor](https://komorei-sdk.github.io/komorei-sdk/komorei/trait.SegmentUrlInterceptor.html)
+and
+[SegmentDataInterceptor](https://komorei-sdk.github.io/komorei-sdk/komorei/trait.SegmentDataInterceptor.html)
+traits. The media engine then calls `intercept_segment_url` before *every* media request it makes
+(playlist, segments, chunks — for session tokens or server-side signatures that change per request),
+and `intercept_segment_data` with the raw bytes of every fetched response body (to de-obfuscate or
+decrypt segments). Both receive the resolved stream data and let you return the input unchanged to
+leave media untouched.
+
 Most sources should implement the
 [DeepLinkHandler](https://komorei-sdk.github.io/komorei-sdk/komorei/trait.DeepLinkHandler.html)
 trait, to allow users to replace the "http" or "https" in a url with "komorei" to open the app

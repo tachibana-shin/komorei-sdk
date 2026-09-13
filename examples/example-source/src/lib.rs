@@ -9,6 +9,7 @@ use komorei::{
 	ImageResponse, Listing, ListingProvider, MigrationHandler, MultiSelectFilter,
 	NotificationHandler, RangeFilter, RangeLong, Result, SelectFilter, Setting, SortFilter, Source,
 	StreamData, StreamInfo, StreamType, SubtitleInfo, TextFilter, ToggleSetting,
+	SegmentDataInterceptor, SegmentUrlInterceptor,
 };
 
 const PAGE_SIZE: i32 = 20;
@@ -531,6 +532,30 @@ impl MigrationHandler for ExampleSource {
 	}
 }
 
+// media sources whose segments are signed/encrypted implement these traits so
+// the app can rewrite segment urls or transform segment bytes per request.
+// the example serves plain, untouched media, so both are identity passthroughs.
+impl SegmentUrlInterceptor for ExampleSource {
+	fn intercept_segment_url(&self, _stream_data: Option<&StreamData>, url: String) -> String {
+		// a real source might append a fresh session token before every fetch:
+		// format!("{url}?token={}", current_session_token())
+		url
+	}
+}
+
+impl SegmentDataInterceptor for ExampleSource {
+	fn intercept_segment_data(
+		&self,
+		_stream_data: Option<&StreamData>,
+		_url: String,
+		data: &[u8],
+	) -> Vec<u8> {
+		// a real source might de-obfuscate/decrypt the segment bytes here:
+		// deobfuscate(data)
+		data.to_vec()
+	}
+}
+
 // the register_source! macro generates the necessary wasm functions for the app
 register_source!(
 	ExampleSource,
@@ -543,7 +568,9 @@ register_source!(
 	NotificationHandler,
 	CoverImageProcessor,
 	DeepLinkHandler,
-	MigrationHandler
+	MigrationHandler,
+	SegmentUrlInterceptor,
+	SegmentDataInterceptor
 );
 
 // you can also implement tests via our custom test runner!
@@ -593,5 +620,19 @@ mod test {
 		assert!(data.is_ok());
 		let err = komorei::KomoreiError::Message(String::from("expected"));
 		assert_eq!(err.error_code(), -1);
+	}
+
+	#[komorei_test]
+	fn test_segment_interceptors() {
+		// the example passes segment urls/data through untouched
+		let url = ExampleSource.intercept_segment_url(
+			None,
+			String::from("https://example.com/seg/1.ts"),
+		);
+		assert_eq!(url, "https://example.com/seg/1.ts");
+
+		let data =
+			ExampleSource.intercept_segment_data(None, url, &[0x01, 0x02, 0x03]);
+		assert_eq!(data, vec![0x01, 0x02, 0x03]);
 	}
 }

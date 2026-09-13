@@ -38,6 +38,31 @@ pub trait Source {
 	fn get_stream(&self, anime: Anime, episode: Episode, stream: StreamInfo) -> Result<StreamData>;
 }
 
+/// A source that rewrites media request urls before they are fetched.
+///
+/// The media engine calls this for every request it performs (playlist,
+/// segments, chunks, ...) and fetches the returned url instead. Sources use it
+/// to decorate urls with session tokens, referers, or server-side signatures
+/// that change per request. Return the url unchanged to leave it untouched.
+pub trait SegmentUrlInterceptor: Source {
+	fn intercept_segment_url(&self, stream_data: Option<&StreamData>, url: String) -> String;
+}
+
+/// A source that transforms media response data after it is fetched.
+///
+/// The media engine calls this with the raw bytes of every response body it
+/// fetches before passing them to the decoder. Sources use it to de-obfuscate
+/// or decrypt HLS/VOD segments, or rewrite a mangled playlist. Return the data
+/// unchanged to leave it untouched.
+pub trait SegmentDataInterceptor: Source {
+	fn intercept_segment_data(
+		&self,
+		stream_data: Option<&StreamData>,
+		url: String,
+		data: &[u8],
+	) -> Vec<u8>;
+}
+
 /// A source that provides listings.
 pub trait ListingProvider: Source {
 	/// Returns the anime for the provided listing.
