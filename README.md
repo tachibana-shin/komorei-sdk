@@ -1,7 +1,7 @@
 # Komorei Rust Source API
 
 A Rust library and toolchain for building sources for the
-[Komorei](https://github.com/tachibana-shin/komorei-app) Android app (anime streaming, Vietnamese UI).
+[Komorei](https://github.com/tachibana-shin/komorei-app) Android app (anime streaming).
 A fork of [aidoku-rs](https://github.com/Aidoku/aidoku-rs) adapted for anime + video streams:
 `.aix` → `.krx`, `manga`/`chapter` → `anime`/`episode`, and new stream APIs.
 
