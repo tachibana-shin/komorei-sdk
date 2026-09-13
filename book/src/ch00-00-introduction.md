@@ -2,7 +2,7 @@
 
 This guide outlines how to create a Komorei source using the
 [komorei-sdk](https://github.com/komorei-sdk/komorei-sdk) library — a fork of `aidoku-rs` adapted
-for the [Komorei](https://github.com/git-shin/komorei-app) Android app (Vietnamese UI, anime
+for the [Komorei](https://github.com/tachibana-shin/komorei-app) Android app (Vietnamese UI, anime
 streaming rather than manga reading).
 
 ## Asking Questions
