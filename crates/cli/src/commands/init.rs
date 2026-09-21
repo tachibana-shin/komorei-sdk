@@ -38,6 +38,7 @@ crate-type = [\"cdylib\"]
 
 ";
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
 	path: Option<std::path::PathBuf>,
 	name: Option<String>,
@@ -46,6 +47,7 @@ pub fn run(
 	content_rating: Option<SourceContentRating>,
 	template: bool,
 	template_name: Option<String>,
+	sdk_path: Option<std::path::PathBuf>,
 ) -> anyhow::Result<()> {
 	// verify already input languages
 	for lang in &languages {
@@ -176,6 +178,26 @@ pub fn run(
 		std::env::set_current_dir(&target_path).context("Failed to change directory")?;
 	}
 
+	// locate the komorei-sdk checkout used for dependency resolution. Prefer an
+	// explicit `--komorei` flag, then auto-detect a `komorei-sdk/` directory
+	// among `target_path`'s ancestors (the standard layout keeps the SDK as a
+	// separate git checkout next to the source collection). Falling back to the
+	// git dependency requires the SDK to be published.
+	let sdk_root: Option<std::path::PathBuf> = match sdk_path {
+		Some(p) => Some(std::path::absolute(&p).unwrap_or(p)),
+		// the current directory is the (already entered) target directory
+		None => {
+			find_komorei_sdk(&std::env::current_dir().context("Failed to get current directory")?)
+		}
+	};
+	match &sdk_root {
+		Some(root) => println!("Using komorei-sdk at {}", root.display()),
+		None => println!(
+			"warning: komorei-sdk not found near {}, falling back to the git dependency",
+			target_path.display()
+		),
+	}
+
 	// determine info from configuration
 	fn create_package_name(name: &str, template: bool) -> String {
 		let name = name
@@ -237,14 +259,15 @@ pub fn run(
 		std::fs::write(&cargo_toml, CARGO_TEMPLATE)
 			.context("Failed to create workspace Cargo.toml")?;
 
-		create_template_files(&template_package_name, &template_name)?;
+		create_template_files(&template_package_name, &template_name, sdk_root.as_deref())?;
 		create_source_files(
 			&package_name,
 			source_json,
 			Some((&template_package_name, &template_name)),
+			sdk_root.as_deref(),
 		)?;
 	} else {
-		create_source_files(&package_name, source_json, None)?;
+		create_source_files(&package_name, source_json, None, sdk_root.as_deref())?;
 		println!("configured a source");
 	}
 
@@ -257,6 +280,7 @@ fn create_empty_komorei_lib(
 	name: &str,
 	in_workspace: bool,
 	template_name: Option<(&str, &str)>,
+	sdk_root: Option<&std::path::Path>,
 ) -> Result<(), anyhow::Error> {
 	// initialize via cargo
 	let mut cmd = &mut std::process::Command::new("cargo");
@@ -279,51 +303,35 @@ fn create_empty_komorei_lib(
 	}
 
 	// add komorei library dependencies
-	let mut add_lib_cmd = std::process::Command::new("cargo");
-	let mut add_test_lib_cmd = std::process::Command::new("cargo");
-	let mut add_test_macro_cmd = std::process::Command::new("cargo");
+	let cargo_dir = std::env::current_dir().context("Failed to get current directory")?;
 
-	let mut commands = vec![
-		// todo: replace with the actual komorei-sdk repository URL
-		add_lib_cmd
-			.arg("add")
-			.arg("komorei")
-			.arg("--git")
-			.arg("https://github.com/komorei-sdk/komorei-sdk.git"),
-		add_test_lib_cmd
-			.arg("add")
-			.arg("komorei")
-			.arg("--git")
-			.arg("https://github.com/komorei-sdk/komorei-sdk.git")
-			.arg("--features")
-			.arg("test")
-			.arg("--dev"),
-		add_test_macro_cmd
-			.arg("add")
-			.arg("komorei-test")
-			.arg("--git")
-			.arg("https://github.com/komorei-sdk/komorei-sdk.git")
-			.arg("--dev"),
-	];
+	if let Some(sdk_root) = sdk_root {
+		// local development: reference the komorei-sdk checkout by relative path
+		// (the SDK is not published, so a git dependency can't be resolved yet)
+		let lib_dir = relative_path(&cargo_dir, &sdk_root.join("crates").join("lib"));
+		let test_macro_dir = relative_path(&cargo_dir, &sdk_root.join("crates").join("test-macro"));
 
-	// if a template name is provided, add it as a dependency
-	let mut add_template_cmd = std::process::Command::new("cargo");
-	if let Some((template_package_name, _)) = template_name {
-		commands.push(
-			add_template_cmd
-				.arg("add")
-				.arg("--path")
-				.arg(format!("../{template_package_name}")),
-		);
+		cargo_add_path_dependency("komorei", &lib_dir, &["json"], false)?;
+		cargo_add_path_dependency("komorei", &lib_dir, &["test"], true)?;
+		cargo_add_path_dependency("komorei-test", &test_macro_dir, &[], true)?;
+	} else {
+		// fall back to the (as yet unpublished) git repository
+		cargo_add_git_dependency("komorei", &["json"], false)?;
+		cargo_add_git_dependency("komorei", &["test"], true)?;
+		cargo_add_git_dependency("komorei-test", &[], true)?;
 	}
 
-	for command in commands {
-		let result = command
+	// if a template name is provided, add it as a dependency
+	if let Some((template_package_name, _)) = template_name {
+		let mut add_template_cmd = std::process::Command::new("cargo");
+		let result = add_template_cmd
+			.arg("add")
+			.arg("--path")
+			.arg(format!("../{template_package_name}"))
 			.stdout(std::process::Stdio::null())
 			.stderr(std::process::Stdio::null())
 			.status()
 			.context("Failed to initialize source via cargo")?;
-
 		if !result.success() {
 			return Err(anyhow!("Failed to initialize source via cargo"));
 		}
@@ -332,16 +340,107 @@ fn create_empty_komorei_lib(
 	Ok(())
 }
 
+// add a path-based dependency to the crate in the current directory
+fn cargo_add_path_dependency(
+	package: &str,
+	path: &std::path::Path,
+	features: &[&str],
+	dev: bool,
+) -> Result<(), anyhow::Error> {
+	let mut cmd = std::process::Command::new("cargo");
+	cmd.arg("add").arg(package).arg("--path").arg(path);
+	for feature in features {
+		cmd.arg("--features").arg(feature);
+	}
+	if dev {
+		cmd.arg("--dev");
+	}
+	let result = cmd
+		.stdout(std::process::Stdio::null())
+		.stderr(std::process::Stdio::null())
+		.status()
+		.context("Failed to initialize source via cargo")?;
+	if !result.success() {
+		return Err(anyhow!("Failed to add {} dependency", package));
+	}
+	Ok(())
+}
+
+// add a git-based dependency to the crate in the current directory
+fn cargo_add_git_dependency(
+	package: &str,
+	features: &[&str],
+	dev: bool,
+) -> Result<(), anyhow::Error> {
+	let mut cmd = std::process::Command::new("cargo");
+	cmd.arg("add")
+		.arg(package)
+		.arg("--git")
+		.arg("https://github.com/komorei-sdk/komorei-sdk.git");
+	for feature in features {
+		cmd.arg("--features").arg(feature);
+	}
+	if dev {
+		cmd.arg("--dev");
+	}
+	let result = cmd
+		.stdout(std::process::Stdio::null())
+		.stderr(std::process::Stdio::null())
+		.status()
+		.context("Failed to initialize source via cargo")?;
+	if !result.success() {
+		return Err(anyhow!("Failed to add {} dependency", package));
+	}
+	Ok(())
+}
+
+// locate a `komorei-sdk` directory among `from`'s ancestors
+fn find_komorei_sdk(from: &std::path::Path) -> Option<std::path::PathBuf> {
+	let mut current = Some(from.to_path_buf());
+	while let Some(dir) = current {
+		if dir.join("komorei-sdk").join("Cargo.toml").is_file() {
+			return Some(dir.join("komorei-sdk"));
+		}
+		current = dir.parent().map(|p| p.to_path_buf());
+	}
+	None
+}
+
+// compute a relative path from `from` to `to` (used for cargo path dependencies)
+fn relative_path(from: &std::path::Path, to: &std::path::Path) -> std::path::PathBuf {
+	let from_abs = std::path::absolute(from).unwrap_or_else(|_| from.to_path_buf());
+	let to_abs = std::path::absolute(to).unwrap_or_else(|_| to.to_path_buf());
+
+	let from_components: Vec<_> = from_abs.components().collect();
+	let to_components: Vec<_> = to_abs.components().collect();
+
+	let common = from_components
+		.iter()
+		.zip(&to_components)
+		.take_while(|(a, b)| a == b)
+		.count();
+
+	let mut out = std::path::PathBuf::new();
+	for _ in common..from_components.len() {
+		out.push("..");
+	}
+	for component in &to_components[common..] {
+		out.push(component.as_os_str());
+	}
+	out
+}
+
 // creates files for a new source
 fn create_source_files(
 	package_name: &str,
 	source_json: SourceJson,
 	template_name: Option<(&str, &str)>,
+	sdk_root: Option<&std::path::Path>,
 ) -> Result<(), anyhow::Error> {
 	let in_workspace = template_name.is_some();
 
 	// creates and moves into our new project folder if necessary
-	create_empty_komorei_lib(package_name, in_workspace, template_name)?;
+	create_empty_komorei_lib(package_name, in_workspace, template_name, sdk_root)?;
 
 	// override lib.rs
 	let lib_rs_path = PathBuf::from("src/lib.rs");
@@ -414,8 +513,12 @@ fn create_source_files(
 }
 
 // creates files for a new source template
-fn create_template_files(package_name: &str, name: &str) -> Result<(), anyhow::Error> {
-	create_empty_komorei_lib(package_name, true, None)?;
+fn create_template_files(
+	package_name: &str,
+	name: &str,
+	sdk_root: Option<&std::path::Path>,
+) -> Result<(), anyhow::Error> {
+	create_empty_komorei_lib(package_name, true, None, sdk_root)?;
 
 	// override lib.rs
 	let lib_rs_path = PathBuf::from("src/lib.rs");

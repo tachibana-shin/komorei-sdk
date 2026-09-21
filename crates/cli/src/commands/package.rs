@@ -3,23 +3,35 @@ use anyhow::{Context, anyhow};
 use std::io::prelude::*;
 
 pub fn run(path: Option<std::path::PathBuf>) -> anyhow::Result<()> {
-	// move to the directory if specified
-	if let Some(path) = path {
-		let path = path.as_path();
-		if !path.exists() {
-			return Err(anyhow!("Path does not exist"));
+	// resolve the source directory
+	let source_dir = match path {
+		Some(path) => {
+			if !path.exists() {
+				return Err(anyhow!("Path does not exist"));
+			}
+			path.as_path().to_path_buf()
 		}
-		std::env::set_current_dir(path).context("Failed to change directory")?;
-	}
+		None => std::env::current_dir().context("Failed to get current directory")?,
+	};
 
-	let current_path = std::env::current_dir().context("Failed to get current directory")?;
+	let package = package_source(&source_dir)?;
+	println!("Created package at {}", package.display());
+	Ok(())
+}
 
+/// Build a source crate for wasm and assemble a `.krx` package next to it.
+///
+/// Produces `{source_dir}/package.krx` and returns its path. Shared by the
+/// single-source `package` command and the monorepo `repo build`/`repo verify`
+/// commands.
+pub fn package_source(source_dir: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
 	// build rust source
 	let result = std::process::Command::new("cargo")
 		.arg("build")
 		.arg("--release")
 		.arg("--target")
 		.arg("wasm32-unknown-unknown")
+		.current_dir(source_dir)
 		.status()
 		.context("Failed to build source")?;
 	if !result.success() {
@@ -27,18 +39,18 @@ pub fn run(path: Option<std::path::PathBuf>) -> anyhow::Result<()> {
 	}
 
 	// folder containing `source.json` file
-	let res_dir = current_path.join("res");
+	let res_dir = source_dir.join("res");
 
 	if !res_dir.exists() {
 		return Err(anyhow!("res directory does not exist"));
 	}
 
 	// find the build folder containing resulting wasm file
-	// start from current directory and go up to 3 parent directories if not found
+	// start from the source directory and go up to 3 parent directories if not found
 	let build_dir = {
 		let mut result = None;
 
-		let mut cur_parent = current_path.clone();
+		let mut cur_parent = source_dir.to_path_buf();
 		let mut build_dir: std::path::PathBuf;
 
 		let max_parents = 3; // only check up to 3 parent directories
@@ -118,14 +130,14 @@ pub fn run(path: Option<std::path::PathBuf>) -> anyhow::Result<()> {
 	}
 
 	// zip payload directory
-	let zip_output = current_path.join("package.krx");
+	let zip_output = source_dir.join("package.krx");
 	create_zip(payload_dir.as_path(), zip_output.as_path())
 		.context("Failed to compress payload directory")?;
 
 	// remove package dir
 	std::fs::remove_dir_all(payload_dir).context("Failed to remove payload directory")?;
 
-	Ok(())
+	Ok(zip_output)
 }
 
 // zip a directory and output to a file
@@ -146,7 +158,6 @@ fn create_zip(src_dir: &std::path::Path, dst_file: &std::path::Path) -> std::io:
 		let path = entry.path();
 
 		if path.is_file() {
-			// let relative_path = path.strip_prefix(src_dir_str).unwrap().to_str().unwrap();
 			let Some(file_name) = path.file_name().and_then(|n| n.to_str()) else {
 				continue;
 			};

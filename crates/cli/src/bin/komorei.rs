@@ -1,7 +1,7 @@
-use komorei_cli::commands;
-use komorei_cli::models::SourceContentRating;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use komorei_cli::commands;
+use komorei_cli::models::SourceContentRating;
 
 #[derive(Parser)]
 struct Cli {
@@ -29,7 +29,7 @@ enum Command {
 		#[arg(short, long)]
 		name: Option<String>,
 	},
-	/// Initialize a new source
+	/// Initializes a new source
 	Init {
 		/// Optional path to the directory to initialize the source in
 		// If not provided, the current directory will be used
@@ -52,6 +52,10 @@ enum Command {
 		/// Template name, if creating a template
 		#[arg(short, long)]
 		template_name: Option<String>,
+		/// Path to the komorei-sdk checkout used for path dependencies
+		// (auto-detected among the ancestors of the source directory when omitted)
+		#[arg(long)]
+		komorei: Option<std::path::PathBuf>,
 	},
 	/// Open a server for log streaming
 	Logcat {
@@ -75,6 +79,11 @@ enum Command {
 		/// Paths to source packages
 		files: Vec<std::path::PathBuf>,
 	},
+	/// Manage a source repository (an Aidoku-community "Sources" style collection)
+	Repo {
+		#[command(subcommand)]
+		command: commands::repo::RepoCommand,
+	},
 }
 
 #[tokio::main]
@@ -96,6 +105,7 @@ async fn main() -> Result<()> {
 			content_rating,
 			template,
 			template_name,
+			komorei,
 		} => commands::init::run(
 			path,
 			name,
@@ -104,6 +114,7 @@ async fn main() -> Result<()> {
 			content_rating,
 			template,
 			template_name,
+			komorei,
 		)?,
 		Command::Logcat { port } => commands::logcat::run(port).await?,
 		Command::Serve {
@@ -112,6 +123,7 @@ async fn main() -> Result<()> {
 			port,
 		} => commands::serve::run(files, &output, port).await?,
 		Command::Verify { files } => commands::verify::run(files)?,
+		Command::Repo { command } => commands::repo::run(command).await?,
 	}
 
 	Ok(())
