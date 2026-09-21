@@ -61,43 +61,60 @@ pub async fn run(command: RepoCommand) -> anyhow::Result<()> {
 	}
 }
 
-/// Find all source crate directories under `<root>/sources/`.
+/// Find all source crate directories in a repository.
+///
+/// Two layouts are supported:
+/// * aidoku-community style: crates live under `<root>/sources/<lang>.<name>/`
+/// * flat: crates live directly under `<root>` (e.g. when the repository is
+///   checked out as the app's `sources/` folder, `sources/ophim/…`)
 ///
 /// A directory counts as a source when it contains both a `Cargo.toml` and a
 /// `res/source.json`. Entries are returned sorted for deterministic builds.
 fn discover_source_dirs(root: &std::path::Path) -> anyhow::Result<Vec<std::path::PathBuf>> {
-	let sources_dir = root.join("sources");
-	if !sources_dir.is_dir() {
-		return Err(anyhow!(
-			"no sources/ directory found under {}",
-			root.display()
-		));
+	let mut containers = vec![root.join("sources")];
+	// only fall back to scanning the root itself when the aidoku-style
+	// `sources/` container is absent (a repo root that is also a crate
+	// container, like `sources/` inside the app checkout)
+	if !containers[0].is_dir() {
+		containers.push(root.to_path_buf());
 	}
 
 	let mut dirs = Vec::new();
-	for entry in std::fs::read_dir(&sources_dir)
-		.with_context(|| format!("Failed to read sources directory {}", sources_dir.display()))?
-	{
-		let path = entry
-			.context("Failed to read entry in sources directory")?
-			.path();
-		if !path.is_dir() {
+	for container in &containers {
+		if !container.is_dir() {
 			continue;
 		}
-		if !path.join("Cargo.toml").is_file() {
-			continue;
+		for entry in std::fs::read_dir(container)
+			.with_context(|| format!("Failed to read sources directory {}", container.display()))?
+		{
+			let path = entry
+				.context("Failed to read entry in sources directory")?
+				.path();
+			if !path.is_dir() {
+				continue;
+			}
+			if !path.join("Cargo.toml").is_file() {
+				continue;
+			}
+			if !path.join("res").join("source.json").is_file() {
+				continue;
+			}
+			// a `.skip` marker excludes a crate from the published list (e.g. local
+			// dev fixtures that ship with the app instead)
+			if path.join(".skip").is_file() {
+				println!("skipping {} (marked with .skip)", path.display());
+				continue;
+			}
+			dirs.push(path);
 		}
-		if !path.join("res").join("source.json").is_file() {
-			continue;
-		}
-		dirs.push(path);
 	}
 	dirs.sort();
+	dirs.dedup();
 
 	if dirs.is_empty() {
 		return Err(anyhow!(
 			"no sources found under {} (expected `sources/*/Cargo.toml` + `sources/*/res/source.json`)",
-			sources_dir.display()
+			root.display()
 		));
 	}
 
