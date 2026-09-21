@@ -266,9 +266,18 @@ pub fn own_text(mut env: FunctionEnvMut<WasmEnv>, rid: Rid) -> FFIResult {
 		Result::InvalidDescriptor.into()
 	}
 }
-pub fn data(_env: FunctionEnvMut<WasmEnv>, _rid: Rid) -> FFIResult {
-	// i don't think scraper supports this?
-	-1
+pub fn data(mut env: FunctionEnvMut<WasmEnv>, rid: Rid) -> FFIResult {
+	let Some(item) = env.data_mut().store.get_mut(rid) else {
+		return Result::InvalidDescriptor.into();
+	};
+	if let Some(node) = item.as_html_node() {
+		let Some(data) = node.data() else {
+			return Result::NoResult.into();
+		};
+		env.data_mut().store.store(StoreItem::String(data))
+	} else {
+		Result::InvalidDescriptor.into()
+	}
 }
 pub fn id(mut env: FunctionEnvMut<WasmEnv>, rid: Rid) -> FFIResult {
 	let Some(item) = env.data_mut().store.get_mut(rid) else {

@@ -129,6 +129,27 @@ impl HtmlNode {
 		}
 	}
 
+	/// Combined data of the node (e.g. the raw source of a `<script>` tag):
+	/// every descendant text/comment node concatenated, mirroring SwiftSoup's
+	/// `Element.data()`.
+	pub fn data(&self) -> Option<String> {
+		let node = self.html.tree.get(self.id)?;
+		let mut out = String::new();
+		for child in node.descendants() {
+			let value = child.value();
+			if let Some(text) = value.as_text() {
+				out.push_str(text);
+			} else if let Some(comment) = value.as_comment() {
+				out.push_str(comment);
+			}
+		}
+		if out.is_empty() {
+			None
+		} else {
+			Some(out)
+		}
+	}
+
 	fn child_node(&self, id: NodeId) -> HtmlNode {
 		HtmlNode {
 			html: self.html.clone(),
