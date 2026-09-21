@@ -206,10 +206,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "sources/**"
-      - "templates/**"
-      - ".github/workflows/build.yaml"
 
 concurrency:
   group: ${{ github.workflow }}
@@ -235,8 +231,8 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-            sources/**/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('sources/**/Cargo.lock') }}
+            **/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Install komorei CLI
@@ -262,10 +258,6 @@ jobs:
 const REPO_PR_WORKFLOW: &str = r#"name: Check PR
 on:
   pull_request:
-    paths:
-      - "sources/**"
-      - "templates/**"
-      - ".github/workflows/pr.yaml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -309,13 +301,17 @@ jobs:
         run: |
           set -uo pipefail
           failed=0
-          for crate in sources/*; do
-            [[ -f "$crate/Cargo.toml" ]] || continue
+          while IFS= read -r cargo_toml; do
+            crate="$(dirname "$cargo_toml")"
+            if [[ -f "$crate/.skip" ]]; then
+              echo "::notice::Skipping $crate (marked .skip)"
+              continue
+            fi
             echo "::group::Linting $crate"
             (cd "$crate" && cargo fmt --check) || failed=1
             (cd "$crate" && cargo clippy --target wasm32-unknown-unknown -- -D warnings) || failed=1
             echo "::endgroup::"
-          done
+          done < <(find . -name Cargo.toml -not -path './target/*' -not -path '*/target/*' | sort)
           exit $failed
 "#;
 
