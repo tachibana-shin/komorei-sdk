@@ -1,6 +1,8 @@
 //! Wrapper around imported source API functions.
 
+pub mod base64;
 pub mod canvas;
+pub mod crypto;
 pub mod defaults;
 pub mod error;
 pub mod html;

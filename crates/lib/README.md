@@ -7,7 +7,7 @@ The `komorei` crate contains everything necessary to create a source for Komorei
 Default features:
 
 - `talc`: Enables the [talc](https://crates.io/crates/talc) allocator when building for wasm.
-- `imports`: Enables the API functions provided to Komorei sources.
+- `imports`: Enables the API functions provided to Komorei sources (net, html, js, defaults, std, canvas, plus the runner-native `base64::{encode, decode}` and `crypto::{md5, sha1, sha256, hmac_sha1, hmac_sha256}` — all digests lowercase hex).
 - `helpers`: Enables some helpful additions for source development.
 
 Optional features:

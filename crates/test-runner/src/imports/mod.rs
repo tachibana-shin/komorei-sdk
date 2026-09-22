@@ -1,7 +1,9 @@
 use crate::WasmEnv;
 use wasmer::*;
 
+mod base64;
 mod canvas;
+mod crypto;
 mod defaults;
 mod env;
 mod html;
@@ -11,6 +13,17 @@ mod std;
 
 pub fn generate_imports(store: &mut Store, env: &FunctionEnv<WasmEnv>) -> Imports {
 	imports! {
+		"base64" => {
+			"encode" => Function::new_typed_with_env(store, env, base64::encode),
+			"decode" => Function::new_typed_with_env(store, env, base64::decode),
+		},
+		"crypto" => {
+			"md5" => Function::new_typed_with_env(store, env, crypto::md5),
+			"sha1" => Function::new_typed_with_env(store, env, crypto::sha1),
+			"sha256" => Function::new_typed_with_env(store, env, crypto::sha256),
+			"hmac_sha1" => Function::new_typed_with_env(store, env, crypto::hmac_sha1),
+			"hmac_sha256" => Function::new_typed_with_env(store, env, crypto::hmac_sha256),
+		},
 		"env" => {
 			"abort" => Function::new_typed_with_env(store, env, env::abort),
 			"print" => Function::new_typed_with_env(store, env, env::print),
