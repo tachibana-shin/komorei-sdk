@@ -19,9 +19,9 @@ If you don't have Rust installed, follow the instructions at [rustup.rs](https:/
 For komorei-cli, run the following command after installing Rust:
 
 ```sh
-cargo install --git https://github.com/komorei-sdk/komorei-sdk.git komorei-cli
+cargo install --git https://github.com/tachibana-shin/komorei-sdk.git komorei-cli
 ```
 
 Then, create a new source project by running `komorei init`.
 
-For a more detailed guide, check out the [source development book](https://komorei-sdk.github.io/komorei-sdk/book/).
+For a more detailed guide, check out the [source development book](https://tachibana-shin.github.io/komorei-sdk/book/).
