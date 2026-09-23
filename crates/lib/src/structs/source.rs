@@ -116,6 +116,17 @@ pub trait DeepLinkHandler: Source {
 	fn handle_deep_link(&self, url: String) -> Result<Option<DeepLinkResult>>;
 }
 
+/// A source that provides "related / recommended" anime for a given title.
+///
+/// The app shows the result in the "Có thể bạn sẽ thích" (you may also like)
+/// section, re-queried whenever a different anime is opened. A source with no
+/// dedicated recommendations endpoint simply does NOT implement this trait —
+/// the app then falls back to a search (`get_search_anime_list`) by the anime's
+/// FIRST genre tag, so the section still fills with same-genre titles.
+pub trait RecommendationsHandler: Source {
+	fn get_recommended_anime(&self, anime: Anime) -> Result<AnimePageResult>;
+}
+
 /// A source that handles basic login with username and password.
 ///
 /// This function should return true if the login was successful.

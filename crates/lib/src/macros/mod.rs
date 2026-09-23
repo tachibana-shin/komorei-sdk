@@ -438,6 +438,21 @@ macro_rules! register_source {
 		}
 	};
 
+	(@single RecommendationsHandler) => {
+		#[unsafe(no_mangle)]
+		#[unsafe(export_name = "get_recommended_anime")]
+		pub unsafe extern "C" fn __wasm_get_recommended_anime(anime_descriptor: i32) -> i32 {
+			let ::core::result::Result::Ok(anime) =
+				$crate::imports::std::read::<$crate::Anime>(anime_descriptor)
+			else {
+				return -1;
+			};
+			use $crate::RecommendationsHandler;
+			let result = __source().get_recommended_anime(anime);
+			__handle_result(result)
+		}
+	};
+
 	(@single SegmentUrlInterceptor) => {
 		#[unsafe(no_mangle)]
 		#[unsafe(export_name = "intercept_segment_url")]
