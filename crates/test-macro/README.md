@@ -31,7 +31,7 @@ mod test {
 Additionally, the `komorei-test-runner` harness is required to run the tests. You can install it by running:
 
 ```sh
-cargo install --git https://github.com/komorei-sdk/komorei-sdk.git komorei-test-runner
+cargo install --git https://github.com/tachibana-shin/komorei-sdk.git komorei-test-runner
 ```
 
 In `.cargo/config.toml`, add the following:

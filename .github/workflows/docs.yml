@@ -1,47 +1,89 @@
-name: Build Documentation
+name: Documentation
+
 on:
   pull_request:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
-  docs:
+  build:
+    name: Build documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Configure GitHub Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           targets: wasm32-unknown-unknown
-      - name: Install dependencies
+
+      - name: Install system dependencies
         run: |
-          sudo apt-get update && sudo apt install pkg-config libfreetype6-dev libfontconfig1-dev
-          tag=$(curl 'https://api.github.com/repos/rust-lang/mdbook/releases/latest' | jq -r '.tag_name')
-          url="https://github.com/rust-lang/mdbook/releases/download/${tag}/mdbook-${tag}-x86_64-unknown-linux-gnu.tar.gz"
-          mkdir mdbook
-          curl -sSL $url | tar -xz --directory=./mdbook
-          echo `pwd`/mdbook >> $GITHUB_PATH
-      - name: Build documentation
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libfreetype6-dev libfontconfig1-dev
+
+      - name: Install mdBook
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="$(curl --fail --silent --show-error --location \
+            'https://api.github.com/repos/rust-lang/mdbook/releases/latest' | jq -er '.tag_name')"
+          case "$(uname -m)" in
+            x86_64) target=x86_64-unknown-linux-gnu ;;
+            aarch64|arm64) target=aarch64-unknown-linux-gnu ;;
+            *) echo "Unsupported runner architecture: $(uname -m)" >&2; exit 1 ;;
+          esac
+          mkdir -p "$HOME/.local/bin"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://github.com/rust-lang/mdbook/releases/download/${tag}/mdbook-${tag}-${target}.tar.gz" \
+            | tar -xz --strip-components=1 -C "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          mdbook --version
+
+      - name: Build Rust API documentation
         run: cargo doc --workspace --no-deps --lib
-      - name: Build book
+
+      - name: Build source-development book
         run: |
-          cd book && mdbook build
-          cp -r book ../target/doc
-          cp index.html ../target/doc
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v6
+          set -euo pipefail
+          (cd book && mdbook build)
+          mkdir -p target/doc/book
+          cp -R book/book/. target/doc/book/
+          cp book/index.html target/doc/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
         with:
-          name: docs
           path: target/doc
-          if-no-files-found: ignore
+
+  deploy:
+    name: Deploy documentation
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        if: ${{ github.ref == 'refs/heads/main' }}
-        with:
-          branch: gh-pages
-          folder: target/doc
-          git-config-name: GitHub Actions
-          git-config-email: github-actions[bot]@users.noreply.github.com
-          commit-message: Update documentation
-          single-commit: true
+        id: deployment
+        uses: actions/deploy-pages@v5

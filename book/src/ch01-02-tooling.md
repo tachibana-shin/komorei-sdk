@@ -12,9 +12,9 @@ rustup target add wasm32-unknown-unknown
 ```
 
 In addition to the Rust tooling, the
-[komorei cli](https://github.com/komorei-sdk/komorei-sdk/tree/main/crates/cli) provides all the other
+[komorei cli](https://github.com/tachibana-shin/komorei-sdk/tree/main/crates/cli) provides all the other
 necessary functionality for source development. To install it, run:
 
 ```sh
-cargo install --git https://github.com/komorei-sdk/komorei-sdk.git komorei-cli
+cargo install --git https://github.com/tachibana-shin/komorei-sdk.git komorei-cli
 ```

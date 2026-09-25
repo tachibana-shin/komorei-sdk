@@ -2,7 +2,7 @@
 
 A command-line utility for Komorei source development and testing.
 
-To get started, run `cargo install --git https://github.com/komorei-sdk/komorei-sdk.git komorei-cli`.
+To get started, run `cargo install --git https://github.com/tachibana-shin/komorei-sdk.git komorei-cli`.
 
 ## Usage
 

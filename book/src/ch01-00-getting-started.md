@@ -6,6 +6,6 @@ website that provides content that can be grouped into "anime" (series) and "epi
 episode resolves to one or more playable "streams" (video servers).
 
 Komorei sources are [WebAssembly](https://webassembly.org/) programs, and the
-[komorei-sdk](https://github.com/komorei-sdk/komorei-sdk) library and
-[komorei cli](https://github.com/komorei-sdk/komorei-sdk/tree/main/crates/cli) tool enable you to
+[komorei-sdk](https://github.com/tachibana-shin/komorei-sdk) library and
+[komorei cli](https://github.com/tachibana-shin/komorei-sdk/tree/main/crates/cli) tool enable you to
 write Rust programs that can be compiled into source packages that the Komorei app runs.

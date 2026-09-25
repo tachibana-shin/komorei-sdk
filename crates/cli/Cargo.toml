@@ -2,7 +2,7 @@
 name = "komorei-cli"
 version = "0.1.0"
 description = "Command-line utility for Komorei source development"
-repository = "https://github.com/komorei-sdk/komorei-sdk"
+repository = "https://github.com/tachibana-shin/komorei-sdk"
 authors = ["skitty"]
 edition = "2024"
 publish = false

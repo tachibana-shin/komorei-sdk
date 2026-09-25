@@ -29,7 +29,7 @@ should be enough for simple tests. To get started, install the test runner with 
 command:
 
 ```sh
-cargo install --git https://github.com/komorei-sdk/komorei-sdk.git komorei-test-runner
+cargo install --git https://github.com/tachibana-shin/komorei-sdk.git komorei-test-runner
 ```
 
 And then configure the project to use the test runner in the `.cargo/config.toml` file:
@@ -63,5 +63,5 @@ mod test {
 ```
 
 If you run into any issues using the test runner, please
-[create an issue](https://github.com/komorei-sdk/komorei-sdk/issues) on the GitHub repo so we can
+[create an issue](https://github.com/tachibana-shin/komorei-sdk/issues) on the GitHub repo so we can
 improve it.

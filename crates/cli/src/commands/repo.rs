@@ -230,7 +230,7 @@ jobs:
 
       - name: Install komorei CLI
         run: |
-          git clone --depth 1 https://github.com/komorei-sdk/komorei-sdk.git /tmp/komorei-sdk
+          git clone --depth 1 https://github.com/tachibana-shin/komorei-sdk.git /tmp/komorei-sdk
           cargo install --path /tmp/komorei-sdk/crates/cli --locked
 
       - name: Build sources
@@ -273,7 +273,7 @@ jobs:
 
       - name: Install komorei CLI
         run: |
-          git clone --depth 1 https://github.com/komorei-sdk/komorei-sdk.git /tmp/komorei-sdk
+          git clone --depth 1 https://github.com/tachibana-shin/komorei-sdk.git /tmp/komorei-sdk
           cargo install --path /tmp/komorei-sdk/crates/cli --locked
 
       - name: Build and verify sources
@@ -310,7 +310,7 @@ jobs:
 
 const REPO_README: &str = r#"# Komorei Sources
 
-A collection of [Komorei](https://github.com/komorei-sdk/komorei-sdk) sources,
+A collection of [Komorei](https://github.com/tachibana-shin/komorei-sdk) sources,
 installable in the Komorei app — the same model as
 [Aidoku-Community/sources](https://github.com/Aidoku-Community/sources).
 

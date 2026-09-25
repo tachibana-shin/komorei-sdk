@@ -12,7 +12,7 @@ To configure this for [Visual Studio Code](https://code.visualstudio.com/), you 
 "json.schemas": [
 	{
 		"fileMatch": ["*/res/source.json"],
-		"url": "https://raw.githubusercontent.com/komorei-sdk/komorei-sdk/refs/heads/main/crates/cli/src/supporting/schema/source.schema.json"
+		"url": "https://raw.githubusercontent.com/tachibana-shin/komorei-sdk/refs/heads/main/crates/cli/src/supporting/schema/source.schema.json"
 	}
 ]
 ```

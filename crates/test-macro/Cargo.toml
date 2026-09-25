@@ -2,7 +2,7 @@
 name = "komorei-test"
 version = "1.0.0"
 description = "Test framework for Komorei sources"
-repository = "https://github.com/komorei-sdk/komorei-sdk"
+repository = "https://github.com/tachibana-shin/komorei-sdk"
 authors = ["skitty"]
 edition = "2024"
 publish = false

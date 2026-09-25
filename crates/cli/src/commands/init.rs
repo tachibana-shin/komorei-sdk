@@ -376,7 +376,7 @@ fn cargo_add_git_dependency(
 	cmd.arg("add")
 		.arg(package)
 		.arg("--git")
-		.arg("https://github.com/komorei-sdk/komorei-sdk.git");
+		.arg("https://github.com/tachibana-shin/komorei-sdk.git");
 	for feature in features {
 		cmd.arg("--features").arg(feature);
 	}

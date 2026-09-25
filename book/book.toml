@@ -5,5 +5,5 @@ language = "en"
 description = "This book outlines how to get started with Komorei source development using the komorei-sdk."
 
 [output.html]
-git-repository-url = "https://github.com/komorei-sdk/komorei-sdk"
+git-repository-url = "https://github.com/tachibana-shin/komorei-sdk"
 sidebar-header-nav = false
