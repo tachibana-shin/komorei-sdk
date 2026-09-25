@@ -52,7 +52,7 @@ jobs:
           mkdir -p "$HOME/.local/bin"
           curl --fail --silent --show-error --location --retry 3 \
             "https://github.com/rust-lang/mdbook/releases/download/${tag}/mdbook-${tag}-${target}.tar.gz" \
-            | tar -xz --strip-components=1 -C "$HOME/.local/bin"
+            | tar -xz -C "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/mdbook" --version
 
