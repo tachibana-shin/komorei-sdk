@@ -1,0 +1,1 @@
+rd_("gkomoreikkomorei_clilkomorei_testAckomorei_test_runner")

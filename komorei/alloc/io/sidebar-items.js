@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ErrorKind"],"fn":["empty","repeat","sink"],"macro":[["const_error",1]],"struct":["BorrowedBuf","BorrowedCursor","Chain","Cursor","Empty","Error","IoSlice","IoSliceMut","Repeat","Sink","Take"],"type":["RawOsError","Result"]};

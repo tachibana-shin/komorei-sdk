@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_NAME"],"enum":["RepoCommand"],"fn":["run"]};

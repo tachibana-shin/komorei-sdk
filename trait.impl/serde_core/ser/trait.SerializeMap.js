@@ -1,0 +1,9 @@
+(function() {
+    const implementors = Object.fromEntries([["komorei",[["impl <a class=\"trait\" href=\"https://docs.rs/serde_core/1.0.228/serde_core/ser/trait.SerializeMap.html\" title=\"trait serde_core::ser::SerializeMap\">SerializeMap</a> for &amp;mut <a class=\"struct\" href=\"komorei/helpers/uri/struct.QueryParameters.html\" title=\"struct komorei::helpers::uri::QueryParameters\">QueryParameters</a>",0]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":59,"fragment_lengths":[355]}
