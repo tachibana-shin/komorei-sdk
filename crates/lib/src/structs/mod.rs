@@ -145,6 +145,20 @@ pub struct Anime {
 	pub episodes: Option<Vec<Episode>>,
 	/// Link to the anime on the source website.
 	pub url: Option<String>,
+	/// Source-defined extras, keyed by a dotted name (e.g. `"avs.recommendations"`).
+	///
+	/// A place for data the site serves on a page the app does not model, so a
+	/// source can hand over something it would otherwise have to re-request:
+	/// AnimeVietsub's detail page carries its own "related" rail, and stashing
+	/// the parsed keys here saves the app a second visit to a page it has just
+	/// loaded.
+	///
+	/// A flat string map on purpose — it round-trips through the runner's ABI
+	/// without a schema, so the app reads it opaquely and no source can break
+	/// another by choosing a key. A source that stores structured data should
+	/// encode it (JSON is the usual choice) rather than widen this type.
+	#[serde(default)]
+	pub extra: HashMap<String, String>,
 }
 
 impl Anime {
@@ -211,6 +225,12 @@ impl Anime {
 		}
 		if let Some(url) = anime.url {
 			self.url = Some(url);
+		}
+		// Merged rather than replaced: a Lite pass may already have cached an
+		// extra the full pass knows nothing about (or the other way round), and
+		// the full pass is the one that wins on a shared key.
+		for (key, value) in anime.extra {
+			self.extra.insert(key, value);
 		}
 	}
 }

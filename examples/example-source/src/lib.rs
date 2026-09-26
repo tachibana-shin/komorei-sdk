@@ -1,12 +1,12 @@
 #![no_std]
 use komorei::{
-	alloc::{vec, String, Vec},
-	imports::{canvas::*, defaults::defaults_get, net::Request},
+	alloc::{string::ToString, vec, String, Vec},
+	imports::{canvas::*, defaults::defaults_get, net::Request, std::send_partial_result},
 	prelude::*,
 	Anime, AnimePageResult, AnimeSeason, AnimeStatus, AnimeWithEpisode, CategoryLink, CheckFilter,
 	CoverImageProcessor, DeepLinkHandler, DeepLinkResult, DynamicFilters, DynamicListings,
 	DynamicSettings, Episode, Filter, FilterValue, HashMap, Home, HomeComponent, HomeLayout,
-	ImageResponse, Listing, ListingProvider, MigrationHandler, MultiSelectFilter,
+	HomePartialResult, ImageResponse, Listing, ListingProvider, MigrationHandler, MultiSelectFilter,
 	NotificationHandler, RangeFilter, RangeLong, Result, SelectFilter, Setting, SortFilter, Source,
 	StreamData, StreamInfo, StreamType, SubtitleInfo, TextFilter, ToggleSetting,
 	SegmentDataInterceptor, SegmentUrlInterceptor,
@@ -259,6 +259,14 @@ impl ListingProvider for ExampleSource {
 // where possible, try to replicate the associated web page's layout
 impl Home for ExampleSource {
 	fn get_home(&self) -> Result<HomeLayout> {
+		// A home that needs several requests should not make the reader wait for
+		// the slowest one. Announce the shape of the page up front with an empty
+		// layout so the app can show the right section skeletons immediately,
+		// then stream each row as it is built.
+		//
+		// Partial results are only a hint: the layout returned at the end is
+		// still what a host without streaming support renders, so the two must
+		// agree.
 		let entries = self
 			.get_search_anime_list(None, 1, Vec::new())?
 			.entries;
@@ -277,96 +285,123 @@ impl Home for ExampleSource {
 			})
 			.take(3)
 			.collect::<Vec<_>>();
+
+		// The placeholder: every row the page will have, with no entries.
+		let titles = [
+			"Big Scroller",
+			"Anime Episode List",
+			"Anime List",
+			"Anime List (Paged, Ranking)",
+			"Scroller",
+			"Filters",
+			"Links",
+		];
+		let placeholders = titles
+			.iter()
+			.map(|title| HomeComponent {
+				title: Some((*title).to_string()),
+				subtitle: None,
+				value: komorei::HomeComponentValue::Links(vec![]),
+			})
+			.collect::<Vec<_>>();
+		send_partial_result(&HomePartialResult::Layout(HomeLayout {
+			components: placeholders,
+		}));
+
+		let components = vec![
+			HomeComponent {
+				title: Some(String::from("Big Scroller")),
+				subtitle: None,
+				value: komorei::HomeComponentValue::BigScroller {
+					entries: entries.clone(),
+					auto_scroll_interval: Some(10.0),
+				},
+			},
+			HomeComponent {
+				title: Some(String::from("Anime Episode List")),
+				subtitle: None,
+				value: komorei::HomeComponentValue::AnimeEpisodeList {
+					page_size: None,
+					entries: anime_episodes,
+					listing: None,
+				},
+			},
+			HomeComponent {
+				title: Some(String::from("Anime List")),
+				subtitle: None,
+				value: komorei::HomeComponentValue::AnimeList {
+					ranking: false,
+					page_size: None,
+					entries: entries.iter().take(2).cloned().map(|m| m.into()).collect(),
+					listing: None,
+				},
+			},
+			HomeComponent {
+				title: Some(String::from("Anime List (Paged, Ranking)")),
+				subtitle: None,
+				value: komorei::HomeComponentValue::AnimeList {
+					ranking: true,
+					page_size: Some(3),
+					entries: entries.iter().take(8).cloned().map(|m| m.into()).collect(),
+					listing: None,
+				},
+			},
+			HomeComponent {
+				title: Some(String::from("Scroller")),
+				subtitle: None,
+				value: komorei::HomeComponentValue::Scroller {
+					entries: entries.clone().into_iter().map(|m| m.into()).collect(),
+					listing: None,
+				},
+			},
+			HomeComponent {
+				title: Some("Filters".into()),
+				subtitle: None,
+				value: komorei::HomeComponentValue::Filters(vec![
+					komorei::FilterItem::from(String::from("Action")),
+					"Adventure".into(),
+					"Fantasy".into(),
+					"Horror".into(),
+					"Slice of Life".into(),
+					"Magic".into(),
+					"Adaptation".into(),
+				]),
+			},
+			HomeComponent {
+				title: Some(String::from("Links")),
+				subtitle: None,
+				value: komorei::HomeComponentValue::Links(vec![
+					komorei::Link {
+						title: String::from("Website Link"),
+						value: Some(komorei::LinkValue::Url(String::from(
+							"https://example.com",
+						))),
+						..Default::default()
+					},
+					komorei::Link {
+						title: String::from("Anime Link"),
+						value: Some(komorei::LinkValue::Anime(entries.first().unwrap().clone())),
+						..Default::default()
+					},
+					komorei::Link {
+						title: String::from("Listing Link"),
+						value: Some(komorei::LinkValue::Listing(Listing {
+							id: String::from("listing"),
+							name: String::from("Listing"),
+							kind: komorei::ListingKind::List,
+						})),
+						..Default::default()
+					},
+				]),
+			},
+		];
+
+		for component in &components {
+			send_partial_result(&HomePartialResult::Component(component.clone()));
+		}
+
 		Ok(HomeLayout {
-			components: vec![
-				HomeComponent {
-					title: Some(String::from("Big Scroller")),
-					subtitle: None,
-					value: komorei::HomeComponentValue::BigScroller {
-						entries: entries.clone(),
-						auto_scroll_interval: Some(10.0),
-					},
-				},
-				HomeComponent {
-					title: Some(String::from("Anime Episode List")),
-					subtitle: None,
-					value: komorei::HomeComponentValue::AnimeEpisodeList {
-						page_size: None,
-						entries: anime_episodes,
-						listing: None,
-					},
-				},
-				HomeComponent {
-					title: Some(String::from("Anime List")),
-					subtitle: None,
-					value: komorei::HomeComponentValue::AnimeList {
-						ranking: false,
-						page_size: None,
-						entries: entries.iter().take(2).cloned().map(|m| m.into()).collect(),
-						listing: None,
-					},
-				},
-				HomeComponent {
-					title: Some(String::from("Anime List (Paged, Ranking)")),
-					subtitle: None,
-					value: komorei::HomeComponentValue::AnimeList {
-						ranking: true,
-						page_size: Some(3),
-						entries: entries.iter().take(8).cloned().map(|m| m.into()).collect(),
-						listing: None,
-					},
-				},
-				HomeComponent {
-					title: Some(String::from("Scroller")),
-					subtitle: None,
-					value: komorei::HomeComponentValue::Scroller {
-						entries: entries.clone().into_iter().map(|m| m.into()).collect(),
-						listing: None,
-					},
-				},
-				HomeComponent {
-					title: Some("Filters".into()),
-					subtitle: None,
-					value: komorei::HomeComponentValue::Filters(vec![
-						komorei::FilterItem::from(String::from("Action")),
-						"Adventure".into(),
-						"Fantasy".into(),
-						"Horror".into(),
-						"Slice of Life".into(),
-						"Magic".into(),
-						"Adaptation".into(),
-					]),
-				},
-				HomeComponent {
-					title: Some(String::from("Links")),
-					subtitle: None,
-					value: komorei::HomeComponentValue::Links(vec![
-						komorei::Link {
-							title: String::from("Website Link"),
-							value: Some(komorei::LinkValue::Url(String::from(
-								"https://example.com",
-							))),
-							..Default::default()
-						},
-						komorei::Link {
-							title: String::from("Anime Link"),
-							value: Some(komorei::LinkValue::Anime(
-								entries.first().unwrap().clone(),
-							)),
-							..Default::default()
-						},
-						komorei::Link {
-							title: String::from("Listing Link"),
-							value: Some(komorei::LinkValue::Listing(Listing {
-								id: String::from("listing"),
-								name: String::from("Listing"),
-								kind: komorei::ListingKind::List,
-							})),
-							..Default::default()
-						},
-					]),
-				},
-			],
+			components,
 		})
 	}
 }
