@@ -166,7 +166,21 @@ impl Anime {
 	///
 	/// Used to upgrade a Lite anime with full details and episodes.
 	pub fn copy_from(&mut self, anime: Anime) {
-		self.key = anime.key;
+		// Every other field below is copied conditionally, so a parser that could
+		// not find a value leaves the Lite record's good data in place. The key is
+		// the one field that must never be taken on trust: it is the anime's
+		// identity, and a `parse_detail` that builds a fresh record without setting
+		// it hands over an empty string. Assigning that would silently strip the
+		// identity off the record — measured on a real AnimeVietsub title, whose
+		// upgrade came back with `id` empty — and everything keyed by it breaks:
+		// the app matches a season list against it, bookmarks and watch history
+		// store it, and the library cannot find the row.
+		//
+		// There is nothing to gain by overwriting a good key with an empty one, so
+		// only a non-empty key replaces it.
+		if !anime.key.is_empty() {
+			self.key = anime.key;
+		}
 		self.source_id = anime.source_id;
 		self.title = anime.title;
 		self.original_title = anime.original_title;
@@ -286,4 +300,73 @@ pub struct Listing {
 	pub name: String,
 	/// Type of listing.
 	pub kind: ListingKind,
+}
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::alloc::vec;
+
+	#[test]
+	fn copy_from_keeps_the_key_when_the_incoming_record_has_none() {
+		// A `parse_detail` that builds a fresh record without setting `key` must
+		// not be able to strip the anime's identity. Measured on a real
+		// AnimeVietsub title, whose upgrade came back with an empty `id`, which
+		// broke the season match, the bookmark and the watch history.
+		let mut lite = Anime {
+			key: "the-real-key".into(),
+			title: "Lite".into(),
+			..Default::default()
+		};
+		lite.copy_from(Anime {
+			key: String::new(),
+			title: "Full".into(),
+			..Default::default()
+		});
+
+		assert_eq!(
+			lite.key, "the-real-key",
+			"an empty key must not overwrite a good one"
+		);
+		assert_eq!(
+			lite.title, "Full",
+			"other fields are still copied as before"
+		);
+	}
+
+	#[test]
+	fn copy_from_still_takes_a_real_key() {
+		// A genuine re-key has to go through — that is the one case where replacing
+		// the key is the point.
+		let mut anime = Anime {
+			key: "old".into(),
+			..Default::default()
+		};
+		anime.copy_from(Anime {
+			key: "new".into(),
+			..Default::default()
+		});
+
+		assert_eq!(anime.key, "new");
+	}
+
+	#[test]
+	fn copy_from_leaves_absent_optional_fields_alone() {
+		// The behaviour the key guard is modelled on: a parser that found nothing
+		// must not blank out what the Lite card already had.
+		let mut lite = Anime {
+			key: "k".into(),
+			description: Some("kept".into()),
+			rating: Some(9.1),
+			genres: vec![CategoryLink {
+				name: "Action".into(),
+				filters: vec![],
+			}],
+			..Default::default()
+		};
+		lite.copy_from(Anime::default());
+
+		assert_eq!(lite.description.as_deref(), Some("kept"));
+		assert_eq!(lite.rating, Some(9.1));
+		assert_eq!(lite.genres.len(), 1);
+	}
 }
