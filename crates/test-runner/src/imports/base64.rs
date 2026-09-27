@@ -1,9 +1,6 @@
-use crate::{
-	FFIResult, Ptr, WasmEnv,
-	libs::StoreItem,
-};
-use base64::engine::general_purpose::STANDARD;
+use crate::{FFIResult, Ptr, WasmEnv, libs::StoreItem};
 use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use wasmer::FunctionEnvMut;
 
 /// Encode raw bytes as standard (RFC 4648 §4) base64 with padding.
@@ -11,7 +8,9 @@ pub fn encode(mut env: FunctionEnvMut<WasmEnv>, ptr: Ptr, len: u32) -> FFIResult
 	let Ok(data) = env.data().read_bytes(&env, ptr, len) else {
 		return -1;
 	};
-	env.data_mut().store.store(StoreItem::String(STANDARD.encode(&data)))
+	env.data_mut()
+		.store
+		.store(StoreItem::String(STANDARD.encode(&data)))
 }
 
 /// Decode, following the WHATWG *forgiving-base64 decode* algorithm — the one a
@@ -26,8 +25,7 @@ pub fn decode(mut env: FunctionEnvMut<WasmEnv>, ptr: Ptr, len: u32) -> FFIResult
 	let Ok(data) = env.data().read_string(&env, ptr, len) else {
 		return -1;
 	};
-	let decoded =
-		forgiving_decode(&data, false).or_else(|()| forgiving_decode(&data, true));
+	let decoded = forgiving_decode(&data, false).or_else(|()| forgiving_decode(&data, true));
 	match decoded {
 		Ok(bytes) => env.data_mut().store.store(StoreItem::Encoded(bytes)),
 		Err(_) => -1,
