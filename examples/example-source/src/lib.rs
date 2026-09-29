@@ -225,12 +225,23 @@ impl ExampleSource {
 	// fetches a page over the network and extracts the first <h1> via the
 	// html parser — demonstrates the net -> html pipeline of the SDK
 	fn fetch_example_title() -> Option<String> {
-		Request::get("https://example.com")
-			.ok()?
-			.html()
-			.ok()?
-			.select_first("h1")?
-			.text()
+		let page = Request::get("https://example.com").ok()?.html().ok()?;
+
+		// example.com used to lead with an <h1> and no longer does — the page
+		// was redesigned down to a <title> and a <p>, and selecting an element
+		// that has quietly gone away fails quietly too: the whole chain here is
+		// `?`-chained, so a missing <h1> left `description` unset and every
+		// assertion downstream compared against an empty string. That reads as a
+		// broken wasm bridge rather than a third party having changed its markup,
+		// which is where it cost the most time.
+		//
+		// <title> is the stabler of the two, so it is the fallback. The live
+		// fetch stays because demonstrating net -> html is the point of this
+		// source; only the assumption about which element carries the text is
+		// relaxed.
+		page.select_first("h1")
+			.or_else(|| page.select_first("title"))
+			.and_then(|el| el.text())
 	}
 }
 

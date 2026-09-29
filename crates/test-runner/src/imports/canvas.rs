@@ -4,7 +4,6 @@ use crate::{
 	FFIResult, Ptr, Rid, WasmEnv,
 	libs::{ImageData, StoreItem},
 };
-use komorei::canvas::{FontWeight, PathOp};
 use euclid::Angle;
 use font_kit::{
 	family_name::FamilyName,
@@ -12,6 +11,7 @@ use font_kit::{
 	source::SystemSource,
 };
 use image::{ImageBuffer, ImageReader};
+use komorei::canvas::{FontWeight, PathOp};
 use raqote::{DrawOptions, DrawTarget, LineCap, LineJoin, Point, Source, Transform};
 use wasmer::FunctionEnvMut;
 

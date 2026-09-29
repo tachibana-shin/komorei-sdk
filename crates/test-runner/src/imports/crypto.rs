@@ -1,7 +1,4 @@
-use crate::{
-	FFIResult, Ptr, WasmEnv,
-	libs::StoreItem,
-};
+use crate::{FFIResult, Ptr, WasmEnv, libs::StoreItem};
 use digest::Digest;
 use hmac::{Hmac, Mac};
 use md5::Md5;

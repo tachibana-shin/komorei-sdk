@@ -143,11 +143,7 @@ impl HtmlNode {
 				out.push_str(comment);
 			}
 		}
-		if out.is_empty() {
-			None
-		} else {
-			Some(out)
-		}
+		if out.is_empty() { None } else { Some(out) }
 	}
 
 	fn child_node(&self, id: NodeId) -> HtmlNode {

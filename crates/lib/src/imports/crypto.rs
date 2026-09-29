@@ -20,12 +20,20 @@ unsafe extern "C" {
 	fn _sha256(ptr: *const u8, len: usize) -> FFIResult;
 
 	#[link_name = "hmac_sha1"]
-	fn _hmac_sha1(data_ptr: *const u8, data_len: usize, key_ptr: *const u8, key_len: usize)
-		-> FFIResult;
+	fn _hmac_sha1(
+		data_ptr: *const u8,
+		data_len: usize,
+		key_ptr: *const u8,
+		key_len: usize,
+	) -> FFIResult;
 
 	#[link_name = "hmac_sha256"]
-	fn _hmac_sha256(data_ptr: *const u8, data_len: usize, key_ptr: *const u8, key_len: usize)
-		-> FFIResult;
+	fn _hmac_sha256(
+		data_ptr: *const u8,
+		data_len: usize,
+		key_ptr: *const u8,
+		key_len: usize,
+	) -> FFIResult;
 }
 
 /// MD5 digest of `data`, lowercase hex.

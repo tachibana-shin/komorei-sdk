@@ -1,5 +1,5 @@
-use komorei_test_runner::{imports, libs};
 use anyhow::{Result, bail};
+use komorei_test_runner::{imports, libs};
 use libtest_mimic::{Arguments, Failed, Trial};
 use std::process::ExitCode;
 use wasmer::*;
